@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ff5722">
+    <title>Llamar al mozo</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f9; margin: 0; padding: 20px; }
+        #conexion { font-size: 13px; color: #888; margin-bottom: 30px; }
+        h1 { color: #333; }
+        button { color: white; border: none; padding: 20px 40px; font-size: 20px; font-weight: bold; border-radius: 10px; cursor: pointer; width: 100%; max-width: 320px; margin-top: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); transition: transform .1s; }
+        button:active { transform: scale(.97); }
+        #btn-accion.llamar { background: #ff5722; }
+        #btn-accion.cancelar { background: #777; }
+        #estado-llamado { margin-top: 30px; font-size: 18px; font-weight: bold; color: #555; }
+        #estado-llamado.en-camino { color: #4CAF50; }
+        #estado-llamado.error { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div id="conexion">Conectando…</div>
+    <h1 id="titulo-mesa">Mesa</h1>
+    <button id="btn-accion" class="llamar" onclick="accion()">🔔 LLAMAR AL MOZO</button>
+    <div id="estado-llamado">Podés llamar al mozo cuando lo necesites.</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const $ = (id) => document.getElementById(id);
+
+        // El ID de la mesa sale de la URL (/mesa/5 -> "5")
+        const mesaId = decodeURIComponent(location.pathname.split('/').pop() || '').trim();
+        $('titulo-mesa').innerText = 'Mesa ' + mesaId;
+
+        let pendiente = false;
+
+        // Al conectar y en CADA reconexión, la mesa se reincorpora a su sala
+        socket.on('connect', () => {
+            socket.emit('unirse-mesa', mesaId);
+            $('conexion').innerText = '🟢 Conectado';
+        });
+        socket.on('disconnect', () => {
+            $('conexion').innerText = '🔴 Sin conexión — reintentando…';
+        });
+
+        function pintar() {
+            const btn = $('btn-accion');
+            btn.innerText = pendiente ? '✕ CANCELAR LLAMADO' : '🔔 LLAMAR AL MOZO';
+            btn.className = pendiente ? 'cancelar' : 'llamar';
+        }
+
+        function estado(texto, clase) {
+            const el = $('estado-llamado');
+            el.innerText = texto;
+            el.className = clase || '';
+        }
+
+        function accion() {
+            if (pendiente) cancelar(); else llamar();
+        }
+
+        function llamar() {
+            estado('Enviando llamado…');
+            socket.emit('cliente-llama', { mesa: mesaId }, (res) => {
+                if (res.ok) {
+                    pendiente = true;
+                    estado('⏳ Llamaste al mozo. Esperando confirmación…');
+                } else if (res.yaPendiente) {
+                    pendiente = true;
+                    estado('⏳ Ya hay un llamado en curso. Esperando al mozo…');
+                } else {
+                    estado('❌ ' + (res.error || 'No se pudo llamar.'), 'error');
+                }
+                pintar();
+            });
+        }
+
+        function cancelar() {
+            socket.emit('cliente-cancela', { mesa: mesaId }, () => {
+                pendiente = false;
+                estado('Llamado cancelado.');
+                pintar();
+            });
+        }
+
+        // El mozo confirmó que va en camino
+        socket.on('mozo-en-camino', () => {
+            pendiente = false;
+            pintar();
+            estado('✅ ¡El mozo vio tu llamado y está en camino!', 'en-camino');
+            if ('vibrate' in navigator) navigator.vibrate([200]);
+        });
+
+        // El mozo deshizo su confirmación: el llamado vuelve a pendiente
+        socket.on('llamado-reactivado', () => {
+            pendiente = true;
+            pintar();
+            estado('⏳ Tu llamado sigue pendiente — el mozo aún no llegó.');
+        });
+    </script>
+</body>
+</html>

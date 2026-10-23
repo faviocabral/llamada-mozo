@@ -1,0 +1,129 @@
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const webpush = require('web-push');
+const { vapid } = require('./config');
+const store = require('./store');
+
+webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
+
+// En redes con inspección TLS (proxys/firewalls corporativos) el envío a FCM
+// falla con SELF_SIGNED_CERT_IN_CHAIN. Opciones en .env, acotadas SOLO a push:
+//   PUSH_TLS_INSECURE=true   -> no verifica el cert en requests a FCM
+//   EXTRA_CA_CERT=./ca.pem   -> confía además en una CA propia
+//   HTTPS_PROXY=http://...   -> sale a internet vía un proxy explícito
+const pushOptions = {};
+if (process.env.PUSH_TLS_INSECURE === 'true') {
+    pushOptions.agent = new https.Agent({ rejectUnauthorized: false });
+    console.log('⚠️  PUSH_TLS_INSECURE activo: TLS sin verificar solo en envíos push a FCM.');
+} else if (process.env.EXTRA_CA_CERT) {
+    pushOptions.agent = new https.Agent({
+        ca: [...require('tls').rootCertificates, fs.readFileSync(path.resolve(process.env.EXTRA_CA_CERT))]
+    });
+}
+if (process.env.HTTPS_PROXY || process.env.https_proxy) {
+    pushOptions.proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+}
+
+// Envía a una lista de suscripciones. Las inválidas (403/404/410) se eliminan
+// solas vía `onExpirada(endpoint)` para que cada canal limpie su propio store.
+function enviar(payload, subs, onExpirada) {
+    const body = JSON.stringify(payload);
+    for (const sub of subs) {
+        webpush.sendNotification(sub, body, pushOptions).catch(err => {
+            if (err.statusCode === 404 || err.statusCode === 410) {
+                console.log(`🗑️ Suscripción expirada eliminada: ${sub.endpoint.slice(-30)}`);
+                onExpirada(sub.endpoint);
+            } else if (err.statusCode === 403) {
+                console.error('❌ Push 403: la suscripción fue creada con otra llave VAPID. Hay que re-suscribir el dispositivo.');
+                onExpirada(sub.endpoint);
+            } else {
+                console.error('❌ Error enviando push:', err.statusCode || err.message);
+            }
+        });
+    }
+}
+
+const aMozos = (payload) =>
+    enviar(payload, store.getSubscriptions(), e => store.removeSubscription(e));
+
+const aMesa = (payload, mesaCode) =>
+    enviar(payload, store.getMesaSubscriptions(mesaCode), e => store.removeMesaSubscription(e));
+
+function notificarLlamado(call) {
+    aMozos({
+        title: `⚠️ Llamado — Mesa ${call.mesaNumero || call.mesa}`,
+        body: 'Solicitan la presencia del mozo.',
+        tag: `llamado-mesa-${call.mesa}`,
+        url: '/mozo',
+        call
+    });
+}
+
+function notificarPedido(pedido) {
+    const resumen = pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
+    aMozos({
+        title: `🍽️ Pedido — Mesa ${pedido.mesaNumero}`,
+        body: resumen.slice(0, 120),
+        tag: `pedido-${pedido.id}`,
+        url: '/mozo',
+        pedido
+    });
+}
+
+// ---------- Avisos al CLIENTE de la mesa (seguimiento del pedido) ----------
+
+function notificarPedidoConfirmado(pedido) {
+    aMesa({
+        title: `✅ Pedido confirmado — Mesa ${pedido.mesaNumero}`,
+        body: 'El mozo lo tomó y ya pasó a cocina.',
+        tag: `pedido-ok-${pedido.id}`,
+        url: `/m/${pedido.mesaCode}`
+    }, pedido.mesaCode);
+}
+
+function notificarPedidoRechazado(pedido) {
+    aMesa({
+        title: `❌ Pedido rechazado — Mesa ${pedido.mesaNumero}`,
+        body: 'No pudimos tomar tu pedido. Consultá con el mozo.',
+        tag: `pedido-no-${pedido.id}`,
+        url: `/m/${pedido.mesaCode}`
+    }, pedido.mesaCode);
+}
+
+// Aviso al CLIENTE de la mesa: el mozo atendió su llamado y va en camino.
+function notificarMozoEnCamino(call) {
+    aMesa({
+        title: `🙋 ¡El mozo va en camino! — Mesa ${call.mesaNumero || call.mesa}`,
+        body: 'Ya vio tu llamado y está por llegar a tu mesa.',
+        tag: `mozo-camino-${call.mesa}`,
+        url: `/m/${call.mesa}`
+    }, call.mesa);
+}
+
+// Aviso al CLIENTE de la mesa: su pedido pasó a 'listo'.
+function notificarPedidoListo(pedido) {
+    aMesa({
+        title: `🎉 ¡Tu pedido está listo! — Mesa ${pedido.mesaNumero}`,
+        body: 'El mozo ya lo está por llevar a tu mesa.',
+        tag: `pedido-listo-${pedido.id}`,
+        url: `/m/${pedido.mesaCode}`
+    }, pedido.mesaCode);
+}
+
+// Aviso a los MOZOS cuando cocina marca un pedido listo (para ir a buscarlo).
+function notificarPedidoListoMozo(pedido) {
+    aMozos({
+        title: `✅ Listo para servir — Mesa ${pedido.mesaNumero}`,
+        body: 'Cocina terminó el pedido, retirar y llevar a la mesa.',
+        tag: `pedido-servir-${pedido.id}`,
+        url: '/mozo',
+        pedido
+    });
+}
+
+module.exports = {
+    notificarLlamado, notificarPedido, notificarMozoEnCamino,
+    notificarPedidoConfirmado, notificarPedidoRechazado,
+    notificarPedidoListo, notificarPedidoListoMozo
+};

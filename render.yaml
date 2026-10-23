@@ -1,0 +1,28 @@
+# Blueprint de Render — deploy en un click desde el dashboard
+# (New + → Blueprint → apuntar a este repo)
+#
+# El servidor necesita un proceso Node persistente (Socket.IO).
+# Render termina TLS en su proxy → la app corre HTTP interno (no hace falta SSL_*).
+#
+# NOTA: en el plan free el filesystem es efímero — data.json se resetea en
+# cada deploy/restart y las llaves VAPID/MOZO_KEY se regeneran si no están
+# definidas abajo. Definilas como env vars (sync: false = las cargás a mano
+# en el dashboard) para que queden estables entre deploys.
+services:
+  - type: web
+    name: llamada-mozo
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/mesa/m1
+    envVars:
+      # PORT la setea Render automáticamente — no definir
+      - key: MOZO_KEY
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false

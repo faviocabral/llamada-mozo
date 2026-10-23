@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#222222">
+    <link rel="manifest" href="/manifest.json">
+    <title>Panel del Mozo</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #fff; margin: 0; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; max-width: 640px; margin: 0 auto; }
+        h1 { color: #4CAF50; font-size: 22px; margin: 0; }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; background: #444; display: inline-block; margin-left: 6px; }
+        .badge.ok { background: #1b5e20; }
+        .badge.err { background: #b71c1c; }
+        #contenedor-alertas { max-width: 640px; margin: 20px auto 0; }
+        .tarjeta-alerta { background: #333; border-left: 8px solid #ff5722; padding: 15px; margin-top: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; text-align: left; animation: entrada .25s ease; }
+        @keyframes entrada { from { transform: translateY(-8px); opacity: 0; } }
+        .tarjeta-alerta strong { font-size: 20px; }
+        .tarjeta-alerta small { color: #bbb; }
+        .atendido-btn { background: #4CAF50; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; white-space: nowrap; }
+        .atendido-btn:active { transform: scale(.96); }
+        #vacio { color: #888; margin-top: 40px; text-align: center; }
+        .tarjeta-atendida { background: #2a2a2a; border-left: 8px solid #4CAF50; padding: 12px 15px; margin-top: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; text-align: left; opacity: .75; }
+        .tarjeta-atendida strong { font-size: 16px; }
+        .tarjeta-atendida small { color: #999; }
+        .deshacer-btn { background: transparent; color: #ffb74d; border: 1px solid #ffb74d; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; white-space: nowrap; }
+        .deshacer-btn:active { transform: scale(.96); }
+        .historial-btn { background: transparent; color: #64b5f6; border: 1px solid #64b5f6; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; margin-left: 6px; }
+        .historial-btn[hidden] { display: none; }
+        #modal-historial { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 20; }
+        #modal-historial[hidden] { display: none; }
+        .modal-box { background: #2b2b2b; padding: 20px; border-radius: 10px; width: 92%; max-width: 520px; max-height: 80vh; display: flex; flex-direction: column; }
+        .modal-box h2 { margin: 0 0 10px; font-size: 18px; color: #4CAF50; }
+        #contenedor-historial { overflow-y: auto; flex: 1; }
+        .cerrar-btn { margin-top: 12px; padding: 10px; background: #444; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+        #titulo-pedidos { color: #ffb74d; font-size: 15px; max-width: 640px; margin: 30px auto 0; }
+        .tarjeta-pedido { background: #333; border-left: 8px solid #ffb74d; padding: 15px; margin-top: 12px; border-radius: 8px; text-align: left; animation: entrada .25s ease; }
+        .tarjeta-pedido .ped-top { display: flex; justify-content: space-between; align-items: center; }
+        .tarjeta-pedido .ped-items { color: #ccc; font-size: 14px; line-height: 1.6; margin: 8px 0; }
+        .tarjeta-pedido .ped-nota { color: #999; font-size: 12px; font-style: italic; }
+        .tarjeta-pedido .ped-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .tarjeta-pedido .ped-total { font-weight: 800; color: #8fd6d0; }
+        .estado-chip { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; }
+        .estado-nuevo { background: #fff3e0; color: #ef6c00; }
+        .estado-confirmado { background: #e3f2fd; color: #1565c0; }
+        .estado-preparando { background: #fce4ec; color: #c2185b; }
+        .estado-listo { background: #e8f5e9; color: #2e7d32; }
+        .pedido-btn { background: #ffb74d; color: #222; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap; }
+        .pedido-btn:active { transform: scale(.96); }
+        .pedido-btn.rechazar { background: transparent; color: #ef5350; border: 1px solid #ef5350; }
+        .ped-hora-m { color: #999; font-size: 13px; }
+        /* Chips de filtro de pedidos (con contadores) */
+        .filtros { display: flex; gap: 8px; overflow-x: auto; max-width: 640px; margin: 8px auto 4px; padding-bottom: 4px; scrollbar-width: none; }
+        .filtros::-webkit-scrollbar { display: none; }
+        .chip-f { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; border: 1.5px solid #555; background: transparent; color: #aaa; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .chip-f.active { background: #ffb74d; border-color: #ffb74d; color: #222; }
+        .chip-f .n { background: rgba(0,0,0,.25); border-radius: 10px; padding: 1px 7px; margin-left: 4px; }
+        .chip-f:not(.active) .n { background: #444; color: #ccc; }
+        .ped-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .ped-actions .pedido-btn { flex: 1; padding: 13px 18px; }
+        .ped-actions .pedido-btn.rechazar { flex: 0 0 auto; padding: 13px 18px; }
+        /* Stepper de seguimiento (mismo formato que la app del cliente, tema oscuro) */
+        .steps { display: flex; align-items: flex-start; margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #444; }
+        .step { display: flex; flex-direction: column; align-items: center; width: 46px; flex-shrink: 0; }
+        .step-ico { width: 30px; height: 30px; border-radius: 50%; background: #444; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #999; filter: grayscale(1); opacity: .45; transition: all .3s; }
+        .step.done .step-ico { background: #ffb74d; color: #222; filter: none; opacity: 1; }
+        .step.current .step-ico { box-shadow: 0 0 0 3px rgba(255,183,77,.35); transform: scale(1.1); }
+        .step-label { font-size: 9px; color: #777; margin-top: 4px; text-align: center; line-height: 1.15; }
+        .step.done .step-label { color: #ffb74d; font-weight: 700; }
+        .step-line { flex: 1; height: 3px; background: #444; border-radius: 2px; margin-top: 14px; transition: background .3s; }
+        .step-line.done { background: #ffb74d; }
+        .ped-line { display: flex; justify-content: space-between; gap: 10px; }
+        .ped-line .pl-price { color: #ccc; font-weight: 600; white-space: nowrap; }
+        #login { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; z-index: 10; }
+        #login[hidden] { display: none; }
+        #login .box { background: #333; padding: 30px; border-radius: 10px; text-align: center; width: 90%; max-width: 340px; }
+        #login input { width: 100%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #555; background: #222; color: #fff; box-sizing: border-box; margin: 10px 0; }
+        #login button { width: 100%; padding: 12px; background: #ff5722; color: #fff; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #login .error { color: #ff8a65; font-size: 13px; min-height: 18px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📡 Panel del Mozo</h1>
+        <div>
+            <span id="estado-socket" class="badge">Conectando…</span>
+            <span id="estado-push" class="badge">Push: …</span>
+            <button id="btn-historial" class="historial-btn" hidden onclick="abrirHistorial()"></button>
+        </div>
+    </header>
+    <div id="contenedor-alertas"></div>
+    <p id="vacio">Sin llamados pendientes.</p>
+    <h2 id="titulo-pedidos" hidden>🍽️ Pedidos activos</h2>
+    <div id="filtros-pedidos" class="filtros" hidden></div>
+    <div id="contenedor-pedidos"></div>
+
+    <div id="modal-historial" hidden>
+        <div class="modal-box">
+            <h2>📋 Historial de atendidas</h2>
+            <div id="contenedor-historial"></div>
+            <button class="cerrar-btn" onclick="cerrarHistorial()">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="login" hidden>
+        <div class="box">
+            <h2>🔐 Acceso de mozo</h2>
+            <p>Ingresá la clave del panel</p>
+            <input id="input-key" type="password" placeholder="Clave de mozo" autocomplete="off">
+            <div class="error" id="login-error"></div>
+            <button onclick="entrar()">Entrar</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const llamados = new Map();  // id -> call pendiente
+        const atendidos = new Map(); // id -> call atendido (historial reciente)
+        const pedidos = new Map();   // id -> pedido activo
+        let pedidosInit = false;
+        let socket = null;
+        let pushIniciado = false;
+        let filtroPedidos = 'todos';
+
+        // Chips de filtro con contadores (como las categorías del menú)
+        const GRUPOS_PEDIDO = [
+            { id: 'todos', label: 'Todos', match: () => true },
+            { id: 'nuevo', label: '⏳ Por confirmar', match: p => p.estado === 'nuevo' },
+            { id: 'cocina', label: '👨‍🍳 En cocina', match: p => p.estado === 'confirmado' || p.estado === 'preparando' },
+            { id: 'listo', label: '🛎️ Para retirar', match: p => p.estado === 'listo' }
+        ];
+        // Lo que requiere acción del mozo va primero: confirmar → retirar → cocina
+        const PRIORIDAD = { nuevo: 0, listo: 1, confirmado: 2, preparando: 3 };
+        let audioCtx = null;
+
+        // ---------- Clave de acceso ----------
+        function obtenerKey() {
+            const enUrl = new URLSearchParams(location.search).get('key');
+            if (enUrl) {
+                localStorage.setItem('mozoKey', enUrl);
+                // Limpia la clave de la barra de direcciones
+                history.replaceState(null, '', '/mozo');
+                return enUrl;
+            }
+            return localStorage.getItem('mozoKey');
+        }
+
+        function entrar() {
+            const key = $('input-key').value.trim();
+            if (!key) return;
+            localStorage.setItem('mozoKey', key);
+            $('login-error').textContent = '';
+            conectar(key);
+        }
+
+        // ---------- Conexión socket ----------
+        function conectar(key) {
+            if (socket) socket.disconnect();
+            socket = io({ auth: { role: 'mozo', key } });
+
+            socket.on('connect', () => {
+                $('login').hidden = true;
+                setBadge('estado-socket', '🟢 Conectado', true);
+                if (!pushIniciado) { pushIniciado = true; inicializarPush(); }
+            });
+            socket.on('connect_error', (err) => {
+                if (/clave/i.test(err.message)) {
+                    localStorage.removeItem('mozoKey');
+                    $('login').hidden = false;
+                    $('login-error').textContent = 'Clave incorrecta. Probá de nuevo.';
+                }
+                setBadge('estado-socket', '🔴 Sin conexión', false);
+            });
+            socket.on('disconnect', () => setBadge('estado-socket', '🔴 Sin conexión', false));
+
+            // Lista completa al conectar/reconectar — el servidor es la fuente de verdad
+            socket.on('llamados-pendientes', (lista) => {
+                llamados.clear();
+                lista.forEach(c => llamados.set(c.id, c));
+                render();
+            });
+            socket.on('atendidos-recientes', (lista) => {
+                atendidos.clear();
+                lista.forEach(c => atendidos.set(c.id, c));
+                render();
+            });
+            socket.on('llamado-nuevo', (call) => {
+                llamados.set(call.id, call);
+                render();
+                avisar();
+            });
+            socket.on('llamado-atendido', (call) => {
+                llamados.delete(call.id);
+                atendidos.set(call.id, call);
+                render();
+            });
+            socket.on('llamado-revertido', (call) => {
+                atendidos.delete(call.id);
+                llamados.set(call.id, call);
+                render();
+                avisar(); // vuelve a sonar: es un pendiente otra vez
+            });
+            socket.on('llamado-cancelado', ({ id }) => { llamados.delete(id); render(); });
+
+            // ---------- Pedidos ----------
+            socket.on('pedidos-activos', (lista) => {
+                if (!pedidosInit) { pedidos.clear(); pedidosInit = true; }
+                lista.forEach(p => pedidos.set(p.id, p));
+                render();
+            });
+            socket.on('pedido-nuevo', (pedido) => {
+                pedidos.set(pedido.id, pedido);
+                render();
+                avisar();
+            });
+            socket.on('pedido-actualizado', (pedido) => {
+                if (pedido.estado === 'entregado' || pedido.estado === 'rechazado') pedidos.delete(pedido.id);
+                else pedidos.set(pedido.id, pedido);
+                render();
+            });
+        }
+
+        // ---------- UI ----------
+        function setBadge(id, texto, ok) {
+            const el = $(id);
+            el.innerText = texto;
+            el.className = 'badge ' + (ok ? 'ok' : 'err');
+        }
+
+        function horaTexto(iso) {
+            const d = new Date(iso);
+            const min = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+            const hhmm = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            return min === 0 ? `${hhmm} · ahora` : `${hhmm} · hace ${min} min`;
+        }
+
+        function render() {
+            const cont = $('contenedor-alertas');
+            cont.innerHTML = '';
+            const ordenados = [...llamados.values()].sort((a, b) => new Date(a.hora) - new Date(b.hora));
+            $('vacio').hidden = ordenados.length > 0;
+            for (const call of ordenados) {
+                const card = document.createElement('div');
+                card.className = 'tarjeta-alerta';
+
+                const info = document.createElement('div');
+                const titulo = document.createElement('strong');
+                titulo.textContent = '⚠️ MESA ' + (call.mesaNumero || call.mesa);
+                const hora = document.createElement('small');
+                hora.dataset.hora = call.hora;
+                hora.textContent = horaTexto(call.hora);
+                info.appendChild(titulo);
+                info.appendChild(document.createElement('br'));
+                info.appendChild(hora);
+
+                const btn = document.createElement('button');
+                btn.className = 'atendido-btn';
+                btn.textContent = '✓ EN CAMINO';
+                btn.onclick = () => atender(call.id);
+
+                card.appendChild(info);
+                card.appendChild(btn);
+                cont.appendChild(card);
+            }
+
+            // La bandeja solo muestra pendientes: lo atendido va directo al historial
+            const listaAtendidas = [...atendidos.values()]
+                .sort((a, b) => new Date(b.atendidaHora) - new Date(a.atendidaHora));
+            $('btn-historial').hidden = listaAtendidas.length === 0;
+            $('btn-historial').textContent = `📋 Historial (${listaAtendidas.length})`;
+
+            const contHist = $('contenedor-historial');
+            contHist.innerHTML = '';
+            listaAtendidas.forEach(c => contHist.appendChild(crearTarjetaAtendida(c)));
+
+            // Pedidos activos: contadores + chips de filtro
+            const todosPedidos = [...pedidos.values()];
+            $('titulo-pedidos').hidden = todosPedidos.length === 0;
+
+            const conteos = { nuevo: 0, cocina: 0, listo: 0 };
+            todosPedidos.forEach(p => {
+                if (p.estado === 'nuevo') conteos.nuevo++;
+                else if (p.estado === 'listo') conteos.listo++;
+                else conteos.cocina++;
+            });
+            const filtros = $('filtros-pedidos');
+            filtros.hidden = todosPedidos.length === 0;
+            filtros.innerHTML = '';
+            GRUPOS_PEDIDO.forEach(g => {
+                const chip = document.createElement('button');
+                chip.className = 'chip-f' + (filtroPedidos === g.id ? ' active' : '');
+                const n = g.id === 'todos' ? todosPedidos.length : conteos[g.id];
+                chip.innerHTML = g.label + ' <span class="n">' + n + '</span>';
+                chip.onclick = () => { filtroPedidos = g.id; render(); };
+                filtros.appendChild(chip);
+            });
+
+            const grupo = GRUPOS_PEDIDO.find(g => g.id === filtroPedidos);
+            const listaPedidos = todosPedidos
+                .filter(grupo.match)
+                .sort((a, b) => (PRIORIDAD[a.estado] - PRIORIDAD[b.estado]) || (new Date(a.hora) - new Date(b.hora)));
+            const contPed = $('contenedor-pedidos');
+            contPed.innerHTML = '';
+            listaPedidos.forEach(p => contPed.appendChild(crearTarjetaPedido(p)));
+        }
+
+        // Stepper (mismo flujo que ve el cliente)
+        const PASOS = [
+            { id: 'nuevo', ico: '🧾', label: 'Pendiente' },
+            { id: 'confirmado', ico: '✓', label: 'Confirmado' },
+            { id: 'preparando', ico: '👨‍🍳', label: 'Preparando' },
+            { id: 'listo', ico: '🛎️', label: 'Listo' },
+            { id: 'entregado', ico: '🍽️', label: 'Entregado' }
+        ];
+        const ORDEN = PASOS.map(s => s.id);
+
+        function crearStepper(estado) {
+            const idx = ORDEN.indexOf(estado);
+            const steps = document.createElement('div');
+            steps.className = 'steps';
+            PASOS.forEach((s, i) => {
+                if (i > 0) {
+                    const line = document.createElement('div');
+                    line.className = 'step-line' + (i <= idx ? ' done' : '');
+                    steps.appendChild(line);
+                }
+                const step = document.createElement('div');
+                step.className = 'step' + (i <= idx ? ' done' : '') + (i === idx ? ' current' : '');
+                const ico = document.createElement('span');
+                ico.className = 'step-ico';
+                ico.textContent = s.ico;
+                const label = document.createElement('span');
+                label.className = 'step-label';
+                label.textContent = s.label;
+                step.appendChild(ico);
+                step.appendChild(label);
+                steps.appendChild(step);
+            });
+            return steps;
+        }
+
+        function crearTarjetaPedido(p) {
+            const card = document.createElement('div');
+            card.className = 'tarjeta-pedido';
+
+            const top = document.createElement('div');
+            top.className = 'ped-top';
+            const titulo = document.createElement('strong');
+            titulo.textContent = '🍽️ MESA ' + p.mesaNumero + (p.cliente ? ' · ' + p.cliente : '');
+            const chip = document.createElement('span');
+            chip.className = 'estado-chip estado-' + p.estado;
+            chip.textContent = ({
+                nuevo: 'Nuevo',
+                confirmado: 'En cocina',
+                preparando: 'Preparando',
+                listo: 'Listo ✓'
+            })[p.estado] || p.estado;
+            top.appendChild(titulo);
+            top.appendChild(chip);
+            card.appendChild(top);
+            card.appendChild(crearStepper(p.estado));
+
+            const items = document.createElement('div');
+            items.className = 'ped-items';
+            p.items.forEach(i => {
+                const line = document.createElement('div');
+                line.className = 'ped-line';
+                const nombre = document.createElement('span');
+                nombre.textContent = i.cantidad + 'x ' + i.nombre;
+                const precio = document.createElement('span');
+                precio.className = 'pl-price';
+                precio.textContent = 'Gs. ' + (i.precio * i.cantidad).toLocaleString('es-PY');
+                line.appendChild(nombre);
+                line.appendChild(precio);
+                items.appendChild(line);
+            });
+            card.appendChild(items);
+            if (p.nota) {
+                const nota = document.createElement('div');
+                nota.className = 'ped-nota';
+                nota.textContent = '“' + p.nota + '”';
+                card.appendChild(nota);
+            }
+
+            const foot = document.createElement('div');
+            foot.className = 'ped-foot';
+            const hora = document.createElement('span');
+            hora.className = 'ped-hora-m';
+            hora.dataset.hora = p.hora;
+            hora.textContent = horaTexto(p.hora);
+            const total = document.createElement('span');
+            total.className = 'ped-total';
+            total.textContent = 'Gs. ' + p.total.toLocaleString('es-PY');
+            foot.appendChild(hora);
+            foot.appendChild(total);
+            card.appendChild(foot);
+
+            // Acciones en una fila propia al pie de la card
+            if (p.estado === 'nuevo' || p.estado === 'listo') {
+                const acciones = document.createElement('div');
+                acciones.className = 'ped-actions';
+                if (p.estado === 'nuevo') {
+                    const btnOk = document.createElement('button');
+                    btnOk.className = 'pedido-btn';
+                    btnOk.textContent = '✓ CONFIRMAR';
+                    btnOk.onclick = () => avanzarPedido(p.id, 'mozo-pedido-confirmado');
+                    const btnNo = document.createElement('button');
+                    btnNo.className = 'pedido-btn rechazar';
+                    btnNo.textContent = '✕';
+                    btnNo.title = 'Rechazar pedido';
+                    btnNo.onclick = () => avanzarPedido(p.id, 'mozo-pedido-rechazado');
+                    acciones.appendChild(btnOk);
+                    acciones.appendChild(btnNo);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'pedido-btn';
+                    btn.textContent = '✓ ENTREGADO';
+                    btn.onclick = () => avanzarPedido(p.id, 'mozo-pedido-entregado');
+                    acciones.appendChild(btn);
+                }
+                card.appendChild(acciones);
+            }
+            return card;
+        }
+
+        function avanzarPedido(id, evento) {
+            socket.emit(evento, { id }, (res) => {
+                if (!res.ok) { pedidos.delete(id); render(); }
+            });
+        }
+
+        function crearTarjetaAtendida(call) {
+            const card = document.createElement('div');
+            card.className = 'tarjeta-atendida';
+
+            const info = document.createElement('div');
+            const titulo = document.createElement('strong');
+            titulo.textContent = '✓ MESA ' + (call.mesaNumero || call.mesa);
+            const hora = document.createElement('small');
+            hora.dataset.hora = call.atendidaHora;
+            hora.dataset.prefix = 'atendida ';
+            hora.textContent = 'atendida ' + horaTexto(call.atendidaHora);
+            info.appendChild(titulo);
+            info.appendChild(document.createElement('br'));
+            info.appendChild(hora);
+
+            const btn = document.createElement('button');
+            btn.className = 'deshacer-btn';
+            btn.textContent = '↩ DESHACER';
+            btn.onclick = () => revertir(call.id);
+
+            card.appendChild(info);
+            card.appendChild(btn);
+            return card;
+        }
+
+        function abrirHistorial() { $('modal-historial').hidden = false; }
+        function cerrarHistorial() { $('modal-historial').hidden = true; }
+
+        // Refresca el "hace X min" de las tarjetas sin re-renderizar
+        setInterval(() => {
+            document.querySelectorAll('[data-hora]').forEach(el => {
+                el.textContent = (el.dataset.prefix || '') + horaTexto(el.dataset.hora);
+            });
+        }, 15000);
+
+        function atender(id) {
+            // La tarjeta se mueve al historial cuando llega 'llamado-atendido'
+            socket.emit('mozo-atendio-llamado', { id }, (res) => {
+                if (!res.ok) { llamados.delete(id); render(); }
+            });
+        }
+
+        function revertir(id) {
+            // Vuelve a pendiente en todos los paneles y re-notifica a la mesa
+            socket.emit('mozo-revirtio-llamado', { id }, (res) => {
+                if (!res.ok) {
+                    atendidos.delete(id);
+                    render();
+                    if (res.error) alert(res.error);
+                }
+            });
+        }
+
+        // ---------- Alerta sonora y vibración ----------
+        function avisar() {
+            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300]);
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                [0, 0.25, 0.5].forEach((t) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.value = 880;
+                    g.gain.setValueAtTime(0.25, audioCtx.currentTime + t);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.2);
+                    o.start(audioCtx.currentTime + t);
+                    o.stop(audioCtx.currentTime + t + 0.2);
+                });
+            } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
+        }
+        document.addEventListener('click', () => {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        });
+
+        // ---------- Push (pantalla cerrada / segundo plano) ----------
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
+        }
+
+        const authHeaders = () => ({ Authorization: 'Bearer ' + localStorage.getItem('mozoKey') });
+
+        function mismaKey(bufferA, bufferB) {
+            const a = new Uint8Array(bufferA || []);
+            const b = new Uint8Array(bufferB || []);
+            return a.length === b.length && a.every((v, i) => v === b[i]);
+        }
+
+        async function inicializarPush() {
+            try {
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    return setBadge('estado-push', 'Push: no soportado', false);
+                }
+                const reg = await navigator.serviceWorker.register('/sw.js');
+                const permiso = await Notification.requestPermission();
+                if (permiso !== 'granted') {
+                    return setBadge('estado-push', 'Push: denegado', false);
+                }
+                const resKey = await fetch('/api/key', { headers: authHeaders() });
+                if (!resKey.ok) throw new Error('/api/key ' + resKey.status);
+                const { publicKey } = await resKey.json();
+                const appServerKey = urlBase64ToUint8Array(publicKey);
+
+                let sub = await reg.pushManager.getSubscription();
+                // Si la suscripción existente fue creada con otra llave VAPID,
+                // FCM rechaza los envíos con 403: hay que re-suscribirse.
+                if (sub && !mismaKey(sub.options.applicationServerKey, appServerKey)) {
+                    await sub.unsubscribe();
+                    sub = null;
+                }
+                if (!sub) {
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: appServerKey
+                    });
+                }
+                const res = await fetch('/api/suscribir', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+                setBadge('estado-push', res.ok ? '🔔 Push: activo' : 'Push: error', res.ok);
+            } catch (e) {
+                console.error(e);
+                setBadge('estado-push', 'Push: error', false);
+            }
+        }
+
+        // ---------- Arranque ----------
+        const key = obtenerKey();
+        if (key) conectar(key);
+        else $('login').hidden = false;
+    </script>
+</body>
+</html>

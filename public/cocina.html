@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Panel de Cocina</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #fff; margin: 0; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; max-width: 900px; margin: 0 auto; }
+        h1 { color: #ffb74d; font-size: 22px; margin: 0; }
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; background: #333; display: inline-block; }
+        .badge.ok { background: #1b5e20; }
+        .badge.err { background: #b71c1c; }
+        #tablero { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; max-width: 900px; margin: 20px auto 0; }
+        .tarjeta { background: #16213e; border-left: 8px solid #64b5f6; padding: 15px; border-radius: 8px; animation: entrada .25s ease; display: flex; flex-direction: column; }
+        .tarjeta.preparando { border-left-color: #ffb74d; }
+        @keyframes entrada { from { transform: translateY(-8px); opacity: 0; } }
+        .tarjeta .ped-top { display: flex; justify-content: space-between; align-items: center; }
+        .tarjeta strong { font-size: 19px; }
+        .estado-chip { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; }
+        .estado-confirmado { background: #e3f2fd; color: #1565c0; }
+        .estado-preparando { background: #fff3e0; color: #ef6c00; }
+        .ped-items { color: #ddd; font-size: 15px; line-height: 1.7; margin: 10px 0; }
+        .ped-nota { color: #999; font-size: 13px; font-style: italic; margin-bottom: 8px; }
+        .ped-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 10px; }
+        .ped-hora { color: #888; font-size: 13px; }
+        .ped-btn { border: none; padding: 12px 22px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; }
+        .ped-btn:active { transform: scale(.96); }
+        .btn-empezar { background: #ffb74d; color: #1a1a2e; }
+        .btn-listo { background: #4CAF50; color: #fff; }
+        #vacio { color: #888; margin-top: 60px; text-align: center; grid-column: 1 / -1; }
+        #login { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; z-index: 10; }
+        #login[hidden] { display: none; }
+        #login .box { background: #16213e; padding: 30px; border-radius: 10px; text-align: center; width: 90%; max-width: 340px; }
+        #login input { width: 100%; padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #555; background: #1a1a2e; color: #fff; box-sizing: border-box; margin: 10px 0; }
+        #login button { width: 100%; padding: 12px; background: #ffb74d; color: #1a1a2e; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #login .error { color: #ff8a65; font-size: 13px; min-height: 18px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>👨‍🍳 Cocina</h1>
+        <span id="estado-socket" class="badge">Conectando…</span>
+    </header>
+    <div id="tablero"></div>
+
+    <div id="login" hidden>
+        <div class="box">
+            <h2>🔐 Acceso de cocina</h2>
+            <p>Ingresá la clave del panel</p>
+            <input id="input-key" type="password" placeholder="Clave" autocomplete="off">
+            <div class="error" id="login-error"></div>
+            <button onclick="entrar()">Entrar</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const pedidos = new Map(); // id -> pedido visible para cocina
+        let pedidosInit = false;
+        let socket = null;
+        let audioCtx = null;
+
+        // ---------- Clave de acceso (misma MOZO_KEY) ----------
+        function obtenerKey() {
+            const enUrl = new URLSearchParams(location.search).get('key');
+            if (enUrl) {
+                localStorage.setItem('cocinaKey', enUrl);
+                history.replaceState(null, '', '/cocina');
+                return enUrl;
+            }
+            return localStorage.getItem('cocinaKey');
+        }
+
+        function entrar() {
+            const key = $('input-key').value.trim();
+            if (!key) return;
+            localStorage.setItem('cocinaKey', key);
+            $('login-error').textContent = '';
+            conectar(key);
+        }
+
+        // Cocina solo trabaja con pedidos confirmados o en preparación
+        const esDeCocina = (p) => p.estado === 'confirmado' || p.estado === 'preparando';
+
+        function conectar(key) {
+            if (socket) socket.disconnect();
+            socket = io({ auth: { role: 'mozo', key } });
+
+            socket.on('connect', () => {
+                $('login').hidden = true;
+                setBadge('🟢 Conectado', true);
+            });
+            socket.on('connect_error', (err) => {
+                if (/clave/i.test(err.message)) {
+                    localStorage.removeItem('cocinaKey');
+                    $('login').hidden = false;
+                    $('login-error').textContent = 'Clave incorrecta. Probá de nuevo.';
+                }
+                setBadge('🔴 Sin conexión', false);
+            });
+            socket.on('disconnect', () => setBadge('🔴 Sin conexión', false));
+
+            socket.on('pedidos-activos', (lista) => {
+                if (!pedidosInit) { pedidos.clear(); pedidosInit = true; }
+                lista.filter(esDeCocina).forEach(p => pedidos.set(p.id, p));
+                render();
+            });
+            socket.on('pedido-actualizado', (p) => {
+                if (esDeCocina(p)) {
+                    const esNuevoEnTablero = !pedidos.has(p.id);
+                    pedidos.set(p.id, p);
+                    render();
+                    if (esNuevoEnTablero) avisar(); // suena cuando un pedido recién confirmado entra
+                } else {
+                    pedidos.delete(p.id);
+                    render();
+                }
+            });
+        }
+
+        function setBadge(texto, ok) {
+            const el = $('estado-socket');
+            el.innerText = texto;
+            el.className = 'badge ' + (ok ? 'ok' : 'err');
+        }
+
+        function horaTexto(iso) {
+            const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+            return min === 0 ? 'ahora' : `hace ${min} min`;
+        }
+
+        function render() {
+            const lista = [...pedidos.values()].sort((a, b) => new Date(a.hora) - new Date(b.hora));
+            const tablero = $('tablero');
+            tablero.innerHTML = '';
+            if (!lista.length) {
+                tablero.innerHTML = '<p id="vacio">Sin pedidos en cocina.</p>';
+                return;
+            }
+            for (const p of lista) {
+                const card = document.createElement('div');
+                card.className = 'tarjeta' + (p.estado === 'preparando' ? ' preparando' : '');
+
+                const top = document.createElement('div');
+                top.className = 'ped-top';
+                const titulo = document.createElement('strong');
+                titulo.textContent = 'MESA ' + p.mesaNumero + (p.cliente ? ' · ' + p.cliente : '');
+                const chip = document.createElement('span');
+                chip.className = 'estado-chip estado-' + p.estado;
+                chip.textContent = p.estado === 'confirmado' ? 'Por hacer' : 'Preparando';
+                top.appendChild(titulo);
+                top.appendChild(chip);
+                card.appendChild(top);
+
+                const items = document.createElement('div');
+                items.className = 'ped-items';
+                items.textContent = p.items.map(i => i.cantidad + 'x ' + i.nombre).join(' · ');
+                card.appendChild(items);
+
+                if (p.nota) {
+                    const nota = document.createElement('div');
+                    nota.className = 'ped-nota';
+                    nota.textContent = '“' + p.nota + '”';
+                    card.appendChild(nota);
+                }
+
+                const foot = document.createElement('div');
+                foot.className = 'ped-foot';
+                const hora = document.createElement('span');
+                hora.className = 'ped-hora';
+                hora.dataset.hora = p.hora;
+                hora.textContent = horaTexto(p.hora);
+                const btn = document.createElement('button');
+                if (p.estado === 'confirmado') {
+                    btn.className = 'ped-btn btn-empezar';
+                    btn.textContent = '🔥 EMPEZAR';
+                    btn.onclick = () => avanzar(p.id, 'cocina-pedido-preparando');
+                } else {
+                    btn.className = 'ped-btn btn-listo';
+                    btn.textContent = '✓ LISTO';
+                    btn.onclick = () => avanzar(p.id, 'mozo-pedido-listo');
+                }
+                foot.appendChild(hora);
+                foot.appendChild(btn);
+                card.appendChild(foot);
+                tablero.appendChild(card);
+            }
+        }
+
+        function avanzar(id, evento) {
+            socket.emit(evento, { id }, (res) => {
+                if (!res.ok) { pedidos.delete(id); render(); }
+            });
+        }
+
+        // Refresca el "hace X min" sin re-renderizar
+        setInterval(() => {
+            document.querySelectorAll('[data-hora]').forEach(el => {
+                el.textContent = horaTexto(el.dataset.hora);
+            });
+        }, 15000);
+
+        // ---------- Alerta sonora ----------
+        function avisar() {
+            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300]);
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                [0, 0.25, 0.5].forEach((t) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.value = 660;
+                    g.gain.setValueAtTime(0.25, audioCtx.currentTime + t);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.2);
+                    o.start(audioCtx.currentTime + t);
+                    o.stop(audioCtx.currentTime + t + 0.2);
+                });
+            } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
+        }
+        document.addEventListener('click', () => {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        });
+
+        // ---------- Arranque ----------
+        const key = obtenerKey();
+        if (key) conectar(key);
+        else $('login').hidden = false;
+    </script>
+</body>
+</html>
