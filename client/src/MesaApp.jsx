@@ -57,7 +57,10 @@ export default function MesaApp() {
     const [pedidos, setPedidos] = useState([]);
     const [llamando, setLlamando] = useState(false);
     const [toast, setToast] = useState(null);
-    const [pushEstado, setPushEstado] = useState('pendiente');
+    const [pushEstado, setPushEstado] = useState(() =>
+        !pushSoportado ? 'no-soportado'
+            : Notification.permission === 'denied' ? 'denegado'
+                : 'pendiente');
     const socketRef = useRef(null);
     const toastTimer = useRef(null);
     const estadosPrevios = useRef(new Map());
@@ -289,7 +292,10 @@ export default function MesaApp() {
 
     return (
         <>
-            {tab === 'home' && <Home info={info} />}
+            {tab === 'home' && (
+                <Home info={info} pushEstado={pushEstado}
+                    onActivarPush={activarPush} iosSinInstalar={iosSinInstalar} />
+            )}
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
                     goPedido={() => setTab('pedido')}
