@@ -25,6 +25,11 @@ const mismaKey = (a, b) => {
     return x.length === y.length && x.every((v, i) => v === y[i]);
 };
 
+// Firma para detectar avances: estado agregado + estado de cada partida.
+// El agregado solo no alcanza: cocina puede avanzar sin que cambie.
+const firmaPedido = (p) =>
+    p.estado + '|' + (p.partidas || []).map(pt => pt.estacion + ':' + pt.estado).join(',');
+
 export default function MesaApp() {
     const { code } = useParams();
     // Identidad por dispositivo: los avisos de pedido llegan solo a quien ordenó
@@ -132,7 +137,7 @@ export default function MesaApp() {
                     setPedidos(res.pedidos);
                     // Sin esto el primer pedido-actualizado sonaría sin base:
                     // hay que conocer el estado anterior para detectar el avance
-                    res.pedidos.forEach(p => estadosPrevios.current.set(p.id, p.estado));
+                    res.pedidos.forEach(p => estadosPrevios.current.set(p.id, firmaPedido(p)));
                 }
             });
             // Reenvía la suscripción si el permiso ya estaba dado: el server
@@ -152,12 +157,15 @@ export default function MesaApp() {
         });
         socket.on('pedido-actualizado', (pedido) => {
             const previo = estadosPrevios.current.get(pedido.id);
-            estadosPrevios.current.set(pedido.id, pedido.estado);
-            // Ding en cada avance: confirmado, preparando, listo, rechazado
-            if (pedido.estado !== previo && previo !== undefined) {
+            const firma = firmaPedido(pedido);
+            estadosPrevios.current.set(pedido.id, firma);
+            const previoEstado = previo ? previo.split('|')[0] : undefined;
+            // Ding en cada avance (incluye avances por partida aunque el
+            // estado agregado no cambie, p.ej. cocina avanza y barra sigue)
+            if (firma !== previo && previo !== undefined) {
                 sonarAviso();
             }
-            if (pedido.estado === 'listo' && previo !== 'listo') {
+            if (pedido.estado === 'listo' && previoEstado !== 'listo') {
                 avisar('🎉 ¡Tu pedido está listo!', 'ok');
                 if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
             }

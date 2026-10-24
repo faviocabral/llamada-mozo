@@ -114,7 +114,9 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                                         <span className="chip-mio">Tu pedido</span>}
                                 </div>
                                 {(!(p.partidas || []).length || p.partidas.some(pt => pt.estacion === 'cocina')) &&
-                                    <Stepper estado={p.estado} />}
+                                    // El stepper sigue a la comida; el agregado quedaría
+                                    // frenado por una bebida aún pendiente
+                                    <Stepper estado={(p.partidas || []).find(pt => pt.estacion === 'cocina')?.estado || p.estado} />}
                             </>
                         )}
                         {/* Comida → stepper; bebidas u otras estaciones → línea compacta */}
