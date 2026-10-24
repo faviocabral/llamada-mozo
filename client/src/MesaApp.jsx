@@ -12,6 +12,14 @@ import EstadoPage from './pages/EstadoPage.jsx';
 const pushSoportado =
     'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
+// iOS (16.4+): el push solo funciona si la app está instalada en la
+// pantalla de inicio. En Safari normal PushManager no existe.
+const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const esStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
+const iosSinInstalar = esIOS && !esStandalone;
+
 const b64aUint8 = (str) => {
     const pad = '='.repeat((4 - (str.length % 4)) % 4);
     const b64 = (str + pad).replace(/-/g, '+').replace(/_/g, '/');
@@ -295,6 +303,7 @@ export default function MesaApp() {
             {tab === 'estado' && (
                 <EstadoPage info={info} pedidos={pedidos} clienteId={clienteId}
                     pushEstado={pushEstado} onActivarPush={activarPush}
+                    iosSinInstalar={iosSinInstalar}
                     llamando={llamando} onToggleLlamado={toggleLlamado}
                     onAgregarMas={() => setTab('menu')} />
             )}

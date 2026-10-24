@@ -82,7 +82,7 @@ function ItemsPartida({ items }) {
 
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
-export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, llamando, onToggleLlamado, onAgregarMas }) {
+export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas }) {
     return (
         <div className="page">
             <div className="topbar">
@@ -143,7 +143,14 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                     </button>
                 )}
 
-                {pushEstado === 'pendiente' && (
+                {iosSinInstalar && pushEstado !== 'activo' && (
+                    <div className="push-info">
+                        📲 En iPhone los avisos requieren instalar la app:
+                        tocá <b>Compartir</b> → <b>“Agregar a pantalla de inicio”</b>
+                        y abrila desde el ícono.
+                    </div>
+                )}
+                {!iosSinInstalar && pushEstado === 'pendiente' && (
                     <button className="push-btn" onClick={onActivarPush}>
                         🔔 Avisame cuando mi pedido esté listo
                     </button>

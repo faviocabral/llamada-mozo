@@ -14,13 +14,40 @@ function requireMozo(req, res, next) {
     next();
 }
 
+// --- Manifest PWA por mesa: en iOS el push solo existe si la app está
+// instalada en pantalla de inicio; el start_url dinámico la reabre en SU mesa.
+router.get('/manifest-mesa/:code.json', (req, res) => {
+    const mesa = store.getMesaByCode(req.params.code);
+    if (!mesa) return res.status(404).json({ error: 'Mesa inexistente' });
+    const suc = store.getSucursal(mesa.sucursalId);
+    const tenant = suc && store.getTenant(suc.tenantId);
+    const nombre = (tenant && tenant.nombre) || 'Restaurante';
+    res.json({
+        name: `${nombre} — Mesa ${mesa.numero}`,
+        short_name: `Mesa ${mesa.numero}`,
+        start_url: `/m/${mesa.id}`,
+        scope: '/',
+        display: 'standalone',
+        background_color: '#2ec4b6',
+        theme_color: '#2ec4b6',
+        icons: [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+    });
+});
+
 // --- App del cliente (React) por código público de mesa: /m/m5 ---
 router.get('/m/:code', (req, res) => {
     const index = path.join(CLIENT_DIST, 'index.html');
     if (!fs.existsSync(index)) {
         return res.status(503).send('La app del cliente no está compilada. Corré: npm run build');
     }
-    res.sendFile(index);
+    // Inyecta el manifest de ESTA mesa para que la app instalada
+    // (iOS/Android) vuelva a abrir directo en /m/:code
+    const html = fs.readFileSync(index, 'utf8')
+        .replace('__MANIFEST_URL__', `/manifest-mesa/${encodeURIComponent(req.params.code)}.json`);
+    res.type('html').send(html);
 });
 
 // --- Info pública de la mesa para la app (nombre del local, nro, menú) ---
