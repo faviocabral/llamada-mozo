@@ -48,21 +48,20 @@ const ESTADO_COMPACTO = {
     listo: 'Lista ✓', entregado: 'Entregada ✓', rechazado: 'Rechazada'
 };
 
-// Una partida "simple" (barra) se muestra como línea compacta con chip;
-// la comida conserva el stepper completo.
+// Partidas dentro de la card: solo título + items. El estado de la comida
+// lo muestra el stepper principal de la card; las demás estaciones llevan
+// un chip compacto (bebidas, etc).
 function FilaPartida({ pt }) {
     const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
-    const simple = pt.estacion !== 'cocina';
     return (
         <div className="partida-block">
             <div className="partida-head">
                 <span className="partida-titulo">{lbl.ico} {lbl.nombre}</span>
-                {simple &&
+                {pt.estacion !== 'cocina' &&
                     <span className={'partida-chip' + (pt.estado === 'entregado' ? ' done' : '')}>
                         {ESTADO_COMPACTO[pt.estado] || pt.estado}
                     </span>}
             </div>
-            {!simple && <Stepper estado={pt.estado} />}
             <ItemsPartida items={pt.items} />
         </div>
     );
