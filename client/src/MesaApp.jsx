@@ -93,6 +93,9 @@ export default function MesaApp() {
             socket.emit('pedidos-mesa', { mesa: code }, (res) => {
                 if (res && res.ok) setPedidos(res.pedidos);
             });
+            // Reenvía la suscripción si el permiso ya estaba dado: el server
+            // puede haber perdido las subs tras un restart (fs efímero en Render).
+            if (pushSoportado && Notification.permission === 'granted') suscribirPush();
         });
         socket.on('mozo-en-camino', () => {
             setLlamando(false);

@@ -36,6 +36,9 @@ if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     const keys = webpush.generateVAPIDKeys();
     ensureEnv('VAPID_PUBLIC_KEY', keys.publicKey);
     ensureEnv('VAPID_PRIVATE_KEY', keys.privateKey);
+    console.warn('⚠️  VAPID generadas al vuelo: en hosts con filesystem efímero (Render) ' +
+        'estas llaves cambian en cada restart y todas las suscripciones push quedan ' +
+        'inválidas (403). Definí VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY en el entorno.');
 }
 if (!process.env.MOZO_KEY) {
     ensureEnv('MOZO_KEY', crypto.randomBytes(9).toString('hex'));

@@ -164,6 +164,7 @@
                 $('login').hidden = true;
                 setBadge('estado-socket', '🟢 Conectado', true);
                 if (!pushIniciado) { pushIniciado = true; inicializarPush(); }
+                else reenviarSuscripcion(); // el server pudo perder las subs en un restart
             });
             socket.on('connect_error', (err) => {
                 if (/clave/i.test(err.message)) {
@@ -571,6 +572,22 @@
                 console.error(e);
                 setBadge('estado-push', 'Push: error', false);
             }
+        }
+
+        // Reenvía la suscripción existente al server sin pedir permiso de nuevo.
+        // Cubre el caso de Render: data.json es efímero y un restart borra las subs.
+        async function reenviarSuscripcion() {
+            try {
+                if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+                const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+                const sub = reg && await reg.pushManager.getSubscription();
+                if (!sub) return;
+                await fetch('/api/suscribir', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub)
+                });
+            } catch (e) { /* silencioso: la próxima reconexión reintenta */ }
         }
 
         // ---------- Arranque ----------
