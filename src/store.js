@@ -238,6 +238,8 @@ module.exports = {
     getMesaSubscriptions: (mesaCode) =>
         state.mesaSubscriptions.filter(s => s.mesaCode === mesaCode),
 
+    getAllMesaSubscriptions: () => [...state.mesaSubscriptions],
+
     addMesaSubscription(mesaCode, sub) {
         // Un endpoint solo puede estar ligado a una mesa a la vez (p.ej. si el
         // mismo celular escanea otro QR, la última suscripción gana)

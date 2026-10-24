@@ -122,8 +122,30 @@ function notificarPedidoListoMozo(pedido) {
     });
 }
 
+// Diagnóstico: envía una notificación de prueba a TODAS las suscripciones
+// (mozos y mesas) y devuelve el resultado real de FCM por endpoint.
+async function testEnvio() {
+    const body = JSON.stringify({
+        title: '🧪 Test de push',
+        body: 'Si ves esta notificación, el push funciona.',
+        tag: 'test-' + Date.now(),
+        url: '/'
+    });
+    const subs = [...store.getSubscriptions(), ...store.getAllMesaSubscriptions()];
+    const resultados = await Promise.allSettled(
+        subs.map(s => webpush.sendNotification(s, body, pushOptions))
+    );
+    return subs.map((s, i) => ({
+        endpoint: '…' + s.endpoint.slice(-25),
+        mesa: s.mesaCode || '(mozo)',
+        resultado: resultados[i].status === 'fulfilled'
+            ? resultados[i].value.statusCode
+            : (resultados[i].reason.statusCode || resultados[i].reason.message)
+    }));
+}
+
 module.exports = {
-    notificarLlamado, notificarPedido, notificarMozoEnCamino,
+    notificarLlamado, notificarPedido, notificarMozoEnCamino, testEnvio,
     notificarPedidoConfirmado, notificarPedidoRechazado,
     notificarPedidoListo, notificarPedidoListoMozo
 };

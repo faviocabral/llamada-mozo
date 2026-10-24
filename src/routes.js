@@ -7,9 +7,9 @@ const store = require('./store');
 const router = express.Router();
 const CLIENT_DIST = path.join(__dirname, '..', 'client', 'dist');
 
-// Requiere Authorization: Bearer <MOZO_KEY>
+// Requiere Authorization: Bearer <MOZO_KEY>  (o ?key= para probar desde el browser)
 function requireMozo(req, res, next) {
-    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '') || req.query.key;
     if (token !== mozoKey) return res.status(401).json({ error: 'No autorizado' });
     next();
 }
@@ -76,6 +76,23 @@ router.post('/api/suscribir', requireMozo, (req, res) => {
     store.addSubscription(sub);
     console.log('✅ Dispositivo de mozo suscripto a push.');
     res.status(201).json({ ok: true });
+});
+
+// --- Diagnóstico de push (solo mozo): conteo + envío de prueba a todos ---
+router.get('/api/push-debug', requireMozo, (req, res) => {
+    res.json({
+        mozos: store.getSubscriptions().length,
+        mesas: store.getAllMesaSubscriptions().length
+    });
+});
+
+const push = require('./push');
+router.get('/api/push-test', requireMozo, async (req, res) => {
+    try {
+        res.json(await push.testEnvio());
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 module.exports = router;
