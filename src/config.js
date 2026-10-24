@@ -59,5 +59,9 @@ module.exports = {
     dataDir: path.join(ROOT, 'data'),
     publicDir: path.join(ROOT, 'public'),
     // Minutos que un llamado atendido queda visible en el historial del mozo
-    atendidosTtlMin: parseInt(process.env.ATENDIDOS_TTL_MIN, 10) || 30
+    atendidosTtlMin: parseInt(process.env.ATENDIDOS_TTL_MIN, 10) || 30,
+    // Categorías del menú que se rutean a la estación BARRA (pantalla /barra).
+    // Ej: BARRA_CATEGORIAS=Bebidas,Tragos — vacío = todo va a cocina.
+    barraCategorias: (process.env.BARRA_CATEGORIAS || '')
+        .split(',').map(s => s.trim()).filter(Boolean)
 };

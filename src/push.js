@@ -122,32 +122,42 @@ function notificarMozoEnCamino(call) {
     }, call.mesa);
 }
 
-// Aviso al CLIENTE de la mesa: cocina empezó a preparar su pedido.
-function notificarPedidoPreparando(pedido) {
+// Etiquetas por estación para armar los textos de los avisos
+const ESTACION_TXT = {
+    cocina: { nombre: 'tu pedido', articulo: 'está listo', ico: '🍽️', quien: 'Cocina' },
+    barra:  { nombre: 'tu bebida', articulo: 'está lista', ico: '🥤', quien: 'Barra' }
+};
+const txtEstacion = (estacion) => ESTACION_TXT[estacion] || ESTACION_TXT.cocina;
+
+// Aviso al CLIENTE: una partida empezó a prepararse en su estación.
+function notificarPartidaPreparando(pedido, partida) {
+    const t = txtEstacion(partida.estacion);
     aPedido({
-        title: `👨‍🍳 Preparando tu pedido — Mesa ${pedido.mesaNumero}`,
-        body: 'Cocina ya está trabajando en tu pedido.',
-        tag: `pedido-prep-${pedido.id}`,
+        title: `${t.ico} Preparando ${t.nombre} — Mesa ${pedido.mesaNumero}`,
+        body: `${t.quien} ya está trabajando en ${t.nombre}.`,
+        tag: `prep-${partida.id}`,
         url: `/m/${pedido.mesaCode}`
     }, pedido);
 }
 
-// Aviso al CLIENTE de la mesa: su pedido pasó a 'listo'.
-function notificarPedidoListo(pedido) {
+// Aviso al CLIENTE: una partida quedó lista para retirar/servir.
+function notificarPartidaListo(pedido, partida) {
+    const t = txtEstacion(partida.estacion);
     aPedido({
-        title: `🎉 ¡Tu pedido está listo! — Mesa ${pedido.mesaNumero}`,
+        title: `🎉 ¡${t.nombre} ${t.articulo}! — Mesa ${pedido.mesaNumero}`,
         body: 'El mozo ya lo está por llevar a tu mesa.',
-        tag: `pedido-listo-${pedido.id}`,
+        tag: `listo-${partida.id}`,
         url: `/m/${pedido.mesaCode}`
     }, pedido);
 }
 
-// Aviso a los MOZOS cuando cocina marca un pedido listo (para ir a buscarlo).
-function notificarPedidoListoMozo(pedido) {
+// Aviso a los MOZOS cuando una estación marca una partida lista (ir a buscarla).
+function notificarPedidoListoMozo(pedido, partida) {
+    const t = txtEstacion(partida ? partida.estacion : 'cocina');
     aMozos({
-        title: `✅ Listo para servir — Mesa ${pedido.mesaNumero}`,
-        body: 'Cocina terminó el pedido, retirar y llevar a la mesa.',
-        tag: `pedido-servir-${pedido.id}`,
+        title: `✅ ${t.quien} listo para servir — Mesa ${pedido.mesaNumero}`,
+        body: 'Retirar y llevar a la mesa.',
+        tag: `servir-${partida ? partida.id : pedido.id}`,
         url: '/mozo',
         pedido
     });
@@ -178,5 +188,5 @@ async function testEnvio() {
 module.exports = {
     notificarLlamado, notificarPedido, notificarMozoEnCamino, testEnvio,
     notificarPedidoConfirmado, notificarPedidoRechazado,
-    notificarPedidoPreparando, notificarPedidoListo, notificarPedidoListoMozo
+    notificarPartidaPreparando, notificarPartidaListo, notificarPedidoListoMozo
 };

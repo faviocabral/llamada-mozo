@@ -288,6 +288,8 @@ body {
 .estado-listo { background: #e8f5e9; color: #2e7d32; }
 .estado-entregado { background: #eceff1; color: #607d8b; }
 .estado-rechazado { background: #ffebee; color: #c62828; }
+.partida-block { border-top: 1px dashed rgba(0,0,0,.1); padding-top: 10px; margin-top: 10px; }
+.partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); margin-bottom: 6px; }
 .chip-mio {
     font-size: .68rem; font-weight: 700; color: var(--teal-dark);
     background: rgba(46,196,182,.18); border-radius: 99px;

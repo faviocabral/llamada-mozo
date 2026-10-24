@@ -299,6 +299,15 @@ async function main() {
     assert(actListo.estado === 'listo', 'la mesa debe recibir estado listo');
     ok('cocina marca listo → mesa recibe "pedido-actualizado" (listo)');
 
+    // 20b. Partidas: el pedido trae su ticket por estación; entregar una
+    // estación inexistente en este pedido ('barra') debe fallar
+    assert(Array.isArray(resListo.pedido.partidas) && resListo.pedido.partidas.length === 1
+        && resListo.pedido.partidas[0].estacion === 'cocina',
+        'sin categorías de barra todo cae en la partida cocina');
+    const entMala = await mozo.emitAck('mozo-partida-entregado', { id: pedido.id, estacion: 'barra' });
+    assert(entMala.ok === false, 'entregar partida inexistente debe fallar');
+    ok('pedido lleva partidas por estación + entrega de partida inválida falla');
+
     // 21. Mozo marca entregado → estado final
     const resEntregado = await mozo.emitAck('mozo-pedido-entregado', { id: pedido.id });
     assert(resEntregado.ok === true && resEntregado.pedido.estado === 'entregado', 'entregar debe responder ok');

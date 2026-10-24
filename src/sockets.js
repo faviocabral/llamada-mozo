@@ -141,7 +141,7 @@ module.exports = function registerSockets(io) {
                 if (!item || !Number.isFinite(cantidad) || cantidad < 1 || cantidad > 20) {
                     return ack(cb, { ok: false, error: 'Item inválido en el pedido' });
                 }
-                items.push({ id: item.id, nombre: item.nombre, precio: item.precio, cantidad });
+                items.push({ id: item.id, nombre: item.nombre, precio: item.precio, cantidad, categoria: item.categoria });
                 total += item.precio * cantidad;
             }
             if (!items.length) return ack(cb, { ok: false, error: 'Pedido vacío' });
@@ -170,28 +170,51 @@ module.exports = function registerSockets(io) {
             ack(cb, { ok: true, pedidos: store.getPedidosDeMesa(info.raw) });
         });
 
-        // Flujo: nuevo -(mozo)-> confirmado/rechazado -(cocina)-> preparando
-        // -> listo -(mozo)-> entregado. Las transiciones se validan en el store.
+        // Flujo: nuevo -(mozo)-> confirmado/rechazado. Después cada PARTIDA
+        // avanza por estación: cocina/barra -> preparando -> listo -> entregado.
+        // El estado del pedido es el agregado de sus partidas (ver store).
+        const difundir = (pedido) => {
+            io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
+            io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+        };
+
         const avanzarPedido = (estado) => (data, cb) => {
             if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
             const pedido = store.setPedidoEstado(String((data && data.id) ?? ''), estado);
             if (!pedido) return ack(cb, { ok: false, error: 'Pedido inexistente o transición inválida' });
             console.log(`🍽️ Pedido ${estado}: Mesa ${pedido.mesaNumero}`);
-            io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
-            io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            difundir(pedido);
             if (estado === 'confirmado') push.notificarPedidoConfirmado(pedido);
             if (estado === 'rechazado') push.notificarPedidoRechazado(pedido);
-            if (estado === 'preparando') push.notificarPedidoPreparando(pedido);
+            ack(cb, { ok: true, pedido });
+        };
+
+        // ref: 'cocina'/'barra' fijo, o null para tomarlo de data.estacion
+        const avanzarPartida = (ref, estado) => (data, cb) => {
+            if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
+            const destino = ref || String((data && (data.estacion || data.partidaId)) ?? '');
+            const res = store.setPartidaEstado(String((data && data.id) ?? ''), destino, estado);
+            if (!res) return ack(cb, { ok: false, error: 'Pedido inexistente o transición inválida' });
+            const { pedido, partida } = res;
+            console.log(`🍽️ Partida ${partida.estacion} ${estado}: Mesa ${pedido.mesaNumero}`);
+            difundir(pedido);
+            if (estado === 'preparando') push.notificarPartidaPreparando(pedido, partida);
             if (estado === 'listo') {
-                push.notificarPedidoListo(pedido);
-                push.notificarPedidoListoMozo(pedido);
+                push.notificarPartidaListo(pedido, partida);
+                push.notificarPedidoListoMozo(pedido, partida);
             }
             ack(cb, { ok: true, pedido });
         };
+
         socket.on('mozo-pedido-confirmado', avanzarPedido('confirmado'));
         socket.on('mozo-pedido-rechazado', avanzarPedido('rechazado'));
-        socket.on('cocina-pedido-preparando', avanzarPedido('preparando'));
-        socket.on('mozo-pedido-listo', avanzarPedido('listo'));
-        socket.on('mozo-pedido-entregado', avanzarPedido('entregado'));
+        socket.on('mozo-pedido-entregado', avanzarPedido('entregado')); // entrega TODO el pedido
+        // Estaciones: la pantalla de cocina usa los eventos históricos
+        socket.on('cocina-pedido-preparando', avanzarPartida('cocina', 'preparando'));
+        socket.on('mozo-pedido-listo', avanzarPartida('cocina', 'listo'));
+        socket.on('barra-partida-preparando', avanzarPartida('barra', 'preparando'));
+        socket.on('barra-partida-listo', avanzarPartida('barra', 'listo'));
+        // El mozo entrega una partida puntual (p.ej. bebidas servidas por él)
+        socket.on('mozo-partida-entregado', avanzarPartida(null, 'entregado'));
     });
 };

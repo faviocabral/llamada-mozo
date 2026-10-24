@@ -37,6 +37,24 @@ function Stepper({ estado }) {
     );
 }
 
+const PARTIDA_LBL = {
+    cocina: { ico: '🍽️', nombre: 'Comida' },
+    barra: { ico: '🥤', nombre: 'Bebidas' }
+};
+
+function ItemsPartida({ items }) {
+    return (
+        <div className="pedido-items">
+            {items.map((i, idx) => (
+                <div className="ped-line" key={idx}>
+                    <span>{i.cantidad}× {i.nombre}</span>
+                    <span>{gs(i.precio * i.cantidad)}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
 export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, llamando, onToggleLlamado, onAgregarMas }) {
@@ -63,22 +81,29 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                                 <span className="quien">{p.cliente || 'Pedido'}</span>
                                 <span className="estado-chip estado-rechazado">{ESTADOS.rechazado}</span>
                             </div>
-                        ) : (
+                        ) : (p.partidas || []).length <= 1 ? (
                             <Stepper estado={p.estado} />
-                        )}
+                        ) : null}
                         <div className="pedido-cliente">
                             {p.cliente || 'Pedido'}
                             {p.clienteId && p.clienteId === clienteId &&
                                 <span className="chip-mio">Tu pedido</span>}
                         </div>
-                        <div className="pedido-items">
-                            {p.items.map((i, idx) => (
-                                <div className="ped-line" key={idx}>
-                                    <span>{i.cantidad}× {i.nombre}</span>
-                                    <span>{gs(i.precio * i.cantidad)}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {/* Con más de una estación: sub-stepper e items por partida */}
+                        {(p.partidas || []).length > 1 && p.estado !== 'rechazado' ? (
+                            p.partidas.map(pt => {
+                                const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
+                                return (
+                                    <div className="partida-block" key={pt.id}>
+                                        <div className="partida-titulo">{lbl.ico} {lbl.nombre}</div>
+                                        <Stepper estado={pt.estado} />
+                                        <ItemsPartida items={pt.items} />
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <ItemsPartida items={p.items} />
+                        )}
                         {p.nota && <div className="nota">“{p.nota}”</div>}
                         <div className="pedido-foot">
                             <span className="pedido-hora">

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { dataDir, atendidosTtlMin } = require('./config');
+const { dataDir, atendidosTtlMin, barraCategorias } = require('./config');
 
 const FILE = path.join(dataDir, 'data.json');
 
@@ -17,7 +17,9 @@ let state = {
     sucursales: [],
     mesas: [],
     menu: [],
-    pedidos: []
+    pedidos: [],
+    // Config por restaurante: estaciones.barra = categorías ruteadas a /barra
+    config: { estaciones: { barra: [] } }
 };
 
 const expirada = (c) =>
@@ -37,6 +39,55 @@ const PEDIDO_TRANSICIONES = {
     entregado: [],
     rechazado: []
 };
+
+// --- Estaciones (cocina / barra) ---
+// Las categorías configuradas van a la partida 'barra' (pantalla /barra);
+// el resto a 'cocina'. Env BARRA_CATEGORIAS tiene prioridad sobre data.json.
+function getEstaciones() {
+    const conf = (state.config.estaciones && state.config.estaciones.barra) || [];
+    return { barra: barraCategorias.length ? barraCategorias : conf };
+}
+
+const ORDEN_ESTADO = ['nuevo', 'confirmado', 'preparando', 'listo', 'entregado'];
+
+// Estado del pedido = el menos avanzado de sus partidas (rechazado es nivel pedido)
+function estadoAgregado(partidas) {
+    if (partidas.every(pt => pt.estado === 'rechazado')) return 'rechazado';
+    if (partidas.every(pt => pt.estado === 'entregado')) return 'entregado';
+    const activos = partidas.filter(pt => pt.estado !== 'entregado' && pt.estado !== 'rechazado');
+    return activos.reduce((min, pt) =>
+        ORDEN_ESTADO.indexOf(pt.estado) < ORDEN_ESTADO.indexOf(min) ? pt.estado : min, 'entregado');
+}
+
+// Parte los items en partidas por estación según la config de categorías.
+function armarPartidas(items) {
+    const catsBarra = new Set(getEstaciones().barra.map(c => String(c).toLowerCase()));
+    const porEstacion = {};
+    for (const it of items) {
+        const estacion = catsBarra.has(String(it.categoria || '').toLowerCase()) ? 'barra' : 'cocina';
+        (porEstacion[estacion] = porEstacion[estacion] || []).push(it);
+    }
+    return Object.entries(porEstacion).map(([estacion, its]) => ({
+        id: crypto.randomUUID(),
+        estacion,
+        items: its,
+        estado: 'nuevo'
+    }));
+}
+
+// Migración: pedidos viejos (sin partidas) → una sola partida 'cocina'
+function migrarPartidas(p) {
+    if (Array.isArray(p.partidas) && p.partidas.length) return p;
+    return {
+        ...p,
+        partidas: [{
+            id: crypto.randomUUID(),
+            estacion: 'cocina',
+            items: p.items || [],
+            estado: p.estado || 'nuevo'
+        }]
+    };
+}
 
 function persist() {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -96,7 +147,10 @@ function load() {
         state.sucursales = Array.isArray(parsed.sucursales) ? parsed.sucursales : [];
         state.mesas = Array.isArray(parsed.mesas) ? parsed.mesas : [];
         state.menu = Array.isArray(parsed.menu) ? parsed.menu : [];
-        state.pedidos = Array.isArray(parsed.pedidos) ? parsed.pedidos : [];
+        state.pedidos = (Array.isArray(parsed.pedidos) ? parsed.pedidos : []).map(migrarPartidas);
+        if (parsed.config && parsed.config.estaciones) {
+            state.config.estaciones = { ...state.config.estaciones, ...parsed.config.estaciones };
+        }
     } catch {
         // data.json inexistente o corrupto: arranca limpio
     }
@@ -201,6 +255,8 @@ module.exports = {
             // Dispositivo que envió el pedido: los avisos push de estado van solo a él
             clienteId: clienteId || '',
             items,
+            // Tickets por estación: cocina/barra avanzan independientes
+            partidas: armarPartidas(items),
             nota: nota || '',
             total,
             estado: 'nuevo',
@@ -211,13 +267,40 @@ module.exports = {
         return pedido;
     },
 
+    // Transición a NIVEL PEDIDO: confirmar/rechazar (mozo) o entregar todo.
     setPedidoEstado(id, estado) {
         const p = state.pedidos.find(x => x.id === id);
         if (!p || !(PEDIDO_TRANSICIONES[p.estado] || []).includes(estado)) return null;
+        if (estado === 'entregado') {
+            p.partidas.forEach(pt => { if (pt.estado !== 'rechazado') pt.estado = 'entregado'; });
+        } else {
+            p.partidas.forEach(pt => {
+                if ((PEDIDO_TRANSICIONES[pt.estado] || []).includes(estado)) pt.estado = estado;
+            });
+        }
         p.estado = estado;
         if (PEDIDO_TERMINAL.includes(estado)) p.entregadoHora = new Date().toISOString();
         persist();
         return p;
+    },
+
+    // Transición a NIVEL PARTIDA (por estación): preparando/listo/entregado.
+    // `ref` puede ser partidaId o el nombre de la estación ('cocina'/'barra').
+    setPartidaEstado(pedidoId, ref, estado) {
+        const p = state.pedidos.find(x => x.id === pedidoId);
+        if (!p) return null;
+        const pt = (p.partidas || []).find(x => x.id === ref || x.estacion === ref);
+        // 'entregado' permite saltear pasos a nivel partida: el mozo puede
+        // servir una bebida directo sin forzarla por preparando/listo.
+        const ok = estado === 'entregado'
+            ? ['confirmado', 'preparando', 'listo'].includes(pt && pt.estado)
+            : pt && (PEDIDO_TRANSICIONES[pt.estado] || []).includes(estado);
+        if (!pt || !ok) return null;
+        pt.estado = estado;
+        p.estado = estadoAgregado(p.partidas);
+        if (PEDIDO_TERMINAL.includes(p.estado)) p.entregadoHora = new Date().toISOString();
+        persist();
+        return { pedido: p, partida: pt };
     },
 
     // --- Suscripciones push (una por dispositivo de mozo) ---

@@ -82,8 +82,13 @@
             conectar(key);
         }
 
-        // Cocina solo trabaja con pedidos confirmados o en preparación
-        const esDeCocina = (p) => p.estado === 'confirmado' || p.estado === 'preparando';
+        // Cocina solo trabaja con SU partida: confirmada o en preparación.
+        // (items de otras estaciones — barra — no aparecen acá)
+        const partidaCocina = (p) => (p.partidas || []).find(pt => pt.estacion === 'cocina');
+        const esDeCocina = (p) => {
+            const pt = partidaCocina(p);
+            return pt && (pt.estado === 'confirmado' || pt.estado === 'preparando');
+        };
 
         function conectar(key) {
             if (socket) socket.disconnect();
@@ -141,23 +146,24 @@
                 return;
             }
             for (const p of lista) {
+                const pt = partidaCocina(p);
                 const card = document.createElement('div');
-                card.className = 'tarjeta' + (p.estado === 'preparando' ? ' preparando' : '');
+                card.className = 'tarjeta' + (pt.estado === 'preparando' ? ' preparando' : '');
 
                 const top = document.createElement('div');
                 top.className = 'ped-top';
                 const titulo = document.createElement('strong');
                 titulo.textContent = 'MESA ' + p.mesaNumero + (p.cliente ? ' · ' + p.cliente : '');
                 const chip = document.createElement('span');
-                chip.className = 'estado-chip estado-' + p.estado;
-                chip.textContent = p.estado === 'confirmado' ? 'Por hacer' : 'Preparando';
+                chip.className = 'estado-chip estado-' + pt.estado;
+                chip.textContent = pt.estado === 'confirmado' ? 'Por hacer' : 'Preparando';
                 top.appendChild(titulo);
                 top.appendChild(chip);
                 card.appendChild(top);
 
                 const items = document.createElement('div');
                 items.className = 'ped-items';
-                items.textContent = p.items.map(i => i.cantidad + 'x ' + i.nombre).join(' · ');
+                items.textContent = pt.items.map(i => i.cantidad + 'x ' + i.nombre).join(' · ');
                 card.appendChild(items);
 
                 if (p.nota) {
@@ -174,7 +180,7 @@
                 hora.dataset.hora = p.hora;
                 hora.textContent = horaTexto(p.hora);
                 const btn = document.createElement('button');
-                if (p.estado === 'confirmado') {
+                if (pt.estado === 'confirmado') {
                     btn.className = 'ped-btn btn-empezar';
                     btn.textContent = '🔥 EMPEZAR';
                     btn.onclick = () => avanzar(p.id, 'cocina-pedido-preparando');

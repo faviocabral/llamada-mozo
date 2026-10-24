@@ -65,6 +65,11 @@ router.get('/cocina', (req, res) => {
     res.sendFile(path.join(publicDir, 'cocina.html'));
 });
 
+// Estación de barra (bebidas): solo ve partidas de tipo 'barra'
+router.get('/barra', (req, res) => {
+    res.sendFile(path.join(publicDir, 'barra.html'));
+});
+
 router.get('/api/key', requireMozo, (req, res) => {
     res.json({ publicKey: vapid.publicKey });
 });
