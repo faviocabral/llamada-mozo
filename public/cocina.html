@@ -204,21 +204,26 @@
         }, 15000);
 
         // ---------- Alerta sonora ----------
+        // Alarma ~2.5s: 3 rondas de 3 pitidos alternando tono, más insistente.
         function avisar() {
-            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300]);
+            if ('vibrate' in navigator) navigator.vibrate([400, 150, 400, 150, 400]);
             try {
                 audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-                [0, 0.25, 0.5].forEach((t) => {
-                    const o = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    o.connect(g);
-                    g.connect(audioCtx.destination);
-                    o.frequency.value = 660;
-                    g.gain.setValueAtTime(0.25, audioCtx.currentTime + t);
-                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.2);
-                    o.start(audioCtx.currentTime + t);
-                    o.stop(audioCtx.currentTime + t + 0.2);
-                });
+                const ahora = audioCtx.currentTime;
+                for (let r = 0; r < 3; r++) {
+                    [0, 0.25, 0.5].forEach((t, i) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.frequency.value = i === 1 ? 880 : 660;
+                        const ini = ahora + r * 0.85 + t;
+                        g.gain.setValueAtTime(0.28, ini);
+                        g.gain.exponentialRampToValueAtTime(0.001, ini + 0.2);
+                        o.start(ini);
+                        o.stop(ini + 0.2);
+                    });
+                }
             } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
         }
         document.addEventListener('click', () => {
