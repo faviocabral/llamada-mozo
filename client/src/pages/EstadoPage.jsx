@@ -51,10 +51,10 @@ const ESTADO_COMPACTO = {
 // Partidas dentro de la card: solo título + items. El estado de la comida
 // lo muestra el stepper principal de la card; las demás estaciones llevan
 // un chip compacto (bebidas, etc).
-function FilaPartida({ pt }) {
+function FilaPartida({ pt, primera }) {
     const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
     return (
-        <div className="partida-block">
+        <div className={'partida-block' + (primera ? ' primera' : '')}>
             <div className="partida-head">
                 <span className="partida-titulo">{lbl.ico} {lbl.nombre}</span>
                 {pt.estacion !== 'cocina' &&
@@ -119,9 +119,9 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                         )}
                         {/* Comida → stepper; bebidas u otras estaciones → línea compacta */}
                         {p.estado !== 'rechazado' && (p.partidas || []).length > 1 ? (
-                            p.partidas.map(pt => <FilaPartida pt={pt} key={pt.id} />)
+                            p.partidas.map((pt, i) => <FilaPartida pt={pt} key={pt.id} primera={i === 0} />)
                         ) : p.estado !== 'rechazado' && p.partidas && p.partidas.length === 1 && p.partidas[0].estacion !== 'cocina' ? (
-                            <FilaPartida pt={p.partidas[0]} />
+                            <FilaPartida pt={p.partidas[0]} primera />
                         ) : (
                             <ItemsPartida items={p.items} />
                         )}

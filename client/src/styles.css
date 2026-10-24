@@ -291,6 +291,7 @@ body {
 .estado-entregado { background: #eceff1; color: #607d8b; }
 .estado-rechazado { background: #ffebee; color: #c62828; }
 .partida-block { border-top: 1px dashed rgba(0,0,0,.1); padding-top: 10px; margin-top: 10px; }
+.partida-block.primera { border-top: none; padding-top: 0; margin-top: 0; }
 .partida-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); }
 .partida-chip { font-size: .7rem; font-weight: 800; color: #ef6c00; background: #fff3e0; border-radius: 99px; padding: 3px 10px; }
@@ -300,7 +301,7 @@ body {
     background: rgba(46,196,182,.18); border-radius: 99px;
     padding: 2px 8px; margin-left: 8px; vertical-align: middle;
 }
-.pedido-cliente { font-weight: 800; font-size: 17px; margin: 4px 0 8px; }
+.pedido-cliente { font-weight: 800; font-size: 17px; margin: 4px 0 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; }
 .pedido-items { font-size: 13px; color: #666; line-height: 1.7; }
 .ped-line { display: flex; justify-content: space-between; gap: 12px; }
 .ped-line span:last-child { color: #444; font-weight: 600; white-space: nowrap; }
