@@ -61,6 +61,9 @@ export default function MesaApp() {
         !pushSoportado ? 'no-soportado'
             : Notification.permission === 'denied' ? 'denegado'
                 : 'pendiente');
+    // Chrome lo dispara cuando la PWA es instalable: lo guardamos para
+    // mostrar nuestro propio botón "Instalar app" (el del menú desaparece)
+    const [installEvt, setInstallEvt] = useState(null);
     const socketRef = useRef(null);
     const toastTimer = useRef(null);
     const estadosPrevios = useRef(new Map());
@@ -198,6 +201,26 @@ export default function MesaApp() {
         };
     }, [code]);
 
+    // Captura el prompt de instalación PWA (Android/Chrome) para ofrecer
+    // "Instalar app" desde la Home; en iOS se guía por texto.
+    useEffect(() => {
+        const onInstallable = (e) => { e.preventDefault(); setInstallEvt(e); };
+        const onInstalled = () => setInstallEvt(null);
+        window.addEventListener('beforeinstallprompt', onInstallable);
+        window.addEventListener('appinstalled', onInstalled);
+        return () => {
+            window.removeEventListener('beforeinstallprompt', onInstallable);
+            window.removeEventListener('appinstalled', onInstalled);
+        };
+    }, []);
+
+    const instalarApp = async () => {
+        if (!installEvt) return;
+        installEvt.prompt();
+        await installEvt.userChoice.catch(() => null);
+        setInstallEvt(null);
+    };
+
     // ---------- Push "pedido listo" ----------
     const suscribirPush = async () => {
         if (!pushSoportado || !info || !info.vapidKey) return false;
@@ -294,7 +317,8 @@ export default function MesaApp() {
         <>
             {tab === 'home' && (
                 <Home info={info} pushEstado={pushEstado}
-                    onActivarPush={activarPush} iosSinInstalar={iosSinInstalar} />
+                    onActivarPush={activarPush} iosSinInstalar={iosSinInstalar}
+                    installEvt={installEvt} onInstalar={instalarApp} />
             )}
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
