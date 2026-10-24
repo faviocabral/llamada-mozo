@@ -42,6 +42,32 @@ const PARTIDA_LBL = {
     barra: { ico: '🥤', nombre: 'Bebidas' }
 };
 
+// Estados compactos para partidas simples (bebidas): chip en vez de stepper
+const ESTADO_COMPACTO = {
+    nuevo: 'Pendiente', confirmado: 'En cola', preparando: 'Preparando',
+    listo: 'Lista ✓', entregado: 'Entregada ✓', rechazado: 'Rechazada'
+};
+
+// Una partida "simple" (barra) se muestra como línea compacta con chip;
+// la comida conserva el stepper completo.
+function FilaPartida({ pt }) {
+    const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
+    const simple = pt.estacion !== 'cocina';
+    return (
+        <div className="partida-block">
+            <div className="partida-head">
+                <span className="partida-titulo">{lbl.ico} {lbl.nombre}</span>
+                {simple &&
+                    <span className={'partida-chip' + (pt.estado === 'entregado' ? ' done' : '')}>
+                        {ESTADO_COMPACTO[pt.estado] || pt.estado}
+                    </span>}
+            </div>
+            {!simple && <Stepper estado={pt.estado} />}
+            <ItemsPartida items={pt.items} />
+        </div>
+    );
+}
+
 function ItemsPartida({ items }) {
     return (
         <div className="pedido-items">
@@ -81,7 +107,8 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                                 <span className="quien">{p.cliente || 'Pedido'}</span>
                                 <span className="estado-chip estado-rechazado">{ESTADOS.rechazado}</span>
                             </div>
-                        ) : (p.partidas || []).length <= 1 ? (
+                        ) : !(p.partidas || []).length || p.partidas.some(pt => pt.estacion === 'cocina') ? (
+                            // Stepper solo cuando hay comida (o pedido viejo sin partidas)
                             <Stepper estado={p.estado} />
                         ) : null}
                         <div className="pedido-cliente">
@@ -89,18 +116,11 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                             {p.clienteId && p.clienteId === clienteId &&
                                 <span className="chip-mio">Tu pedido</span>}
                         </div>
-                        {/* Con más de una estación: sub-stepper e items por partida */}
-                        {(p.partidas || []).length > 1 && p.estado !== 'rechazado' ? (
-                            p.partidas.map(pt => {
-                                const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
-                                return (
-                                    <div className="partida-block" key={pt.id}>
-                                        <div className="partida-titulo">{lbl.ico} {lbl.nombre}</div>
-                                        <Stepper estado={pt.estado} />
-                                        <ItemsPartida items={pt.items} />
-                                    </div>
-                                );
-                            })
+                        {/* Comida → stepper; bebidas u otras estaciones → línea compacta */}
+                        {p.estado !== 'rechazado' && (p.partidas || []).length > 1 ? (
+                            p.partidas.map(pt => <FilaPartida pt={pt} key={pt.id} />)
+                        ) : p.estado !== 'rechazado' && p.partidas && p.partidas.length === 1 && p.partidas[0].estacion !== 'cocina' ? (
+                            <FilaPartida pt={p.partidas[0]} />
                         ) : (
                             <ItemsPartida items={p.items} />
                         )}

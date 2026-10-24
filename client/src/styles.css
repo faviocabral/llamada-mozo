@@ -289,7 +289,10 @@ body {
 .estado-entregado { background: #eceff1; color: #607d8b; }
 .estado-rechazado { background: #ffebee; color: #c62828; }
 .partida-block { border-top: 1px dashed rgba(0,0,0,.1); padding-top: 10px; margin-top: 10px; }
-.partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); margin-bottom: 6px; }
+.partida-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); }
+.partida-chip { font-size: .7rem; font-weight: 800; color: #ef6c00; background: #fff3e0; border-radius: 99px; padding: 3px 10px; }
+.partida-chip.done { color: var(--teal-dark); background: rgba(46,196,182,.18); }
 .chip-mio {
     font-size: .68rem; font-weight: 700; color: var(--teal-dark);
     background: rgba(46,196,182,.18); border-radius: 99px;
