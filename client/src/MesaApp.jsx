@@ -66,6 +66,33 @@ export default function MesaApp() {
         } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
     };
 
+    // Sonido de "llamando": tono de timbre telefónico corto (dos pulsos),
+    // para confirmarle al cliente que el llamado salió.
+    const sonarLlamando = () => {
+        try {
+            if (!audioRef.current) {
+                audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const ctx = audioRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+            [0, 0.35].forEach((offset) => {
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.value = 440;   // tono de línea telefónica
+                o.connect(g);
+                g.connect(ctx.destination);
+                const t = ctx.currentTime + offset;
+                g.gain.setValueAtTime(0.001, t);
+                g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+                g.gain.setValueAtTime(0.25, t + 0.28);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+                o.start(t);
+                o.stop(t + 0.32);
+            });
+        } catch (e) {}
+    };
+
     const avisar = (msg, tipo = '') => {
         clearTimeout(toastTimer.current);
         setToast({ msg, tipo });
@@ -217,6 +244,7 @@ export default function MesaApp() {
             socket.emit('cliente-llama', { mesa: code }, (res) => {
                 if (res && (res.ok || res.yaPendiente)) {
                     setLlamando(true);
+                    sonarLlamando();
                     avisar('⏳ Llamando al mozo… tocá de nuevo para cancelar.');
                 } else {
                     avisar('❌ ' + ((res && res.error) || 'No se pudo llamar'), 'err');
