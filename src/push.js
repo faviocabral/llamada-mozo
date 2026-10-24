@@ -101,6 +101,16 @@ function notificarMozoEnCamino(call) {
     }, call.mesa);
 }
 
+// Aviso al CLIENTE de la mesa: cocina empezó a preparar su pedido.
+function notificarPedidoPreparando(pedido) {
+    aMesa({
+        title: `👨‍🍳 Preparando tu pedido — Mesa ${pedido.mesaNumero}`,
+        body: 'Cocina ya está trabajando en tu pedido.',
+        tag: `pedido-prep-${pedido.id}`,
+        url: `/m/${pedido.mesaCode}`
+    }, pedido.mesaCode);
+}
+
 // Aviso al CLIENTE de la mesa: su pedido pasó a 'listo'.
 function notificarPedidoListo(pedido) {
     aMesa({
@@ -147,5 +157,5 @@ async function testEnvio() {
 module.exports = {
     notificarLlamado, notificarPedido, notificarMozoEnCamino, testEnvio,
     notificarPedidoConfirmado, notificarPedidoRechazado,
-    notificarPedidoListo, notificarPedidoListoMozo
+    notificarPedidoPreparando, notificarPedidoListo, notificarPedidoListoMozo
 };

@@ -179,6 +179,7 @@ module.exports = function registerSockets(io) {
             io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
             if (estado === 'confirmado') push.notificarPedidoConfirmado(pedido);
             if (estado === 'rechazado') push.notificarPedidoRechazado(pedido);
+            if (estado === 'preparando') push.notificarPedidoPreparando(pedido);
             if (estado === 'listo') {
                 push.notificarPedidoListo(pedido);
                 push.notificarPedidoListoMozo(pedido);

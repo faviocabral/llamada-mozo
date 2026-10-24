@@ -91,7 +91,12 @@ export default function MesaApp() {
         socket.on('connect', () => {
             socket.emit('unirse-mesa', code);
             socket.emit('pedidos-mesa', { mesa: code }, (res) => {
-                if (res && res.ok) setPedidos(res.pedidos);
+                if (res && res.ok) {
+                    setPedidos(res.pedidos);
+                    // Sin esto el primer pedido-actualizado sonaría sin base:
+                    // hay que conocer el estado anterior para detectar el avance
+                    res.pedidos.forEach(p => estadosPrevios.current.set(p.id, p.estado));
+                }
             });
             // Reenvía la suscripción si el permiso ya estaba dado: el server
             // puede haber perdido las subs tras un restart (fs efímero en Render).
