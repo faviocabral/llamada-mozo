@@ -51,13 +51,20 @@ const aMesa = (payload, mesaCode) =>
     enviar(payload, store.getMesaSubscriptions(mesaCode), e => store.removeMesaSubscription(e));
 
 // Avisos de estado de UN pedido: solo al dispositivo que lo envió (clienteId).
-// Fallback: subs sin clienteId (dispositivos con build viejo) reciben broadcast —
-// en cuanto recarguen la app se re-suscriben con su clienteId y se filtran.
+// Fallback 1: subs sin clienteId (build viejo) reciben broadcast.
+// Fallback 2: si ninguna sub coincide (storage borrado, otro contexto) se
+// broadcastea igual — para el restaurante es mejor ruido que silencio.
 const aPedido = (payload, pedido) => {
-    let subs = store.getMesaSubscriptions(pedido.mesaCode);
+    const todas = store.getMesaSubscriptions(pedido.mesaCode);
+    let subs = todas;
     if (pedido.clienteId) {
-        subs = subs.filter(s => !s.clienteId || s.clienteId === pedido.clienteId);
+        subs = todas.filter(s => !s.clienteId || s.clienteId === pedido.clienteId);
+        if (!subs.length && todas.length) {
+            console.log(`⚠️ Pedido ${pedido.id}: sin sub para clienteId ${pedido.clienteId.slice(0, 8)} — broadcast a la mesa`);
+            subs = todas;
+        }
     }
+    console.log(`📨 Push ${pedido.estado} → ${subs.length}/${todas.length} subs de ${pedido.mesaCode}`);
     enviar(payload, subs, e => store.removeMesaSubscription(e));
 };
 
