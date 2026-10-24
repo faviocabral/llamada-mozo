@@ -97,7 +97,7 @@ function notificarPedidoConfirmado(pedido) {
         body: 'El mozo lo tomó y ya pasó a cocina.',
         tag: `pedido-ok-${pedido.id}`,
         url: `/m/${pedido.mesaCode}`
-    }, pedido.mesaCode);
+    }, pedido);
 }
 
 function notificarPedidoRechazado(pedido) {
@@ -106,7 +106,7 @@ function notificarPedidoRechazado(pedido) {
         body: 'No pudimos tomar tu pedido. Consultá con el mozo.',
         tag: `pedido-no-${pedido.id}`,
         url: `/m/${pedido.mesaCode}`
-    }, pedido.mesaCode);
+    }, pedido);
 }
 
 // Aviso al CLIENTE de la mesa: el mozo atendió su llamado y va en camino.
@@ -126,7 +126,7 @@ function notificarPedidoPreparando(pedido) {
         body: 'Cocina ya está trabajando en tu pedido.',
         tag: `pedido-prep-${pedido.id}`,
         url: `/m/${pedido.mesaCode}`
-    }, pedido.mesaCode);
+    }, pedido);
 }
 
 // Aviso al CLIENTE de la mesa: su pedido pasó a 'listo'.
@@ -136,7 +136,7 @@ function notificarPedidoListo(pedido) {
         body: 'El mozo ya lo está por llevar a tu mesa.',
         tag: `pedido-listo-${pedido.id}`,
         url: `/m/${pedido.mesaCode}`
-    }, pedido.mesaCode);
+    }, pedido);
 }
 
 // Aviso a los MOZOS cuando cocina marca un pedido listo (para ir a buscarlo).
