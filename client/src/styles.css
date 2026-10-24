@@ -25,13 +25,15 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 56px 24px 0;
+    padding: 24px 24px calc(84px + env(safe-area-inset-bottom));
     min-height: 100vh;
+    min-height: 100dvh;
 }
-.home h1 { font-size: 32px; letter-spacing: 3px; margin: 28px 0 4px; }
+.home h1 { font-size: 32px; letter-spacing: 3px; margin: 16px 0 4px; }
 .home .sub { opacity: .9; font-size: 15px; font-weight: 600; }
-.hero { width: 210px; height: 170px; margin: 36px 0 8px; }
+.hero { width: 200px; height: 160px; margin: 26px 0 10px; }
 .home p { opacity: .85; line-height: 1.55; max-width: 300px; font-size: 14px; }
 .cta {
     background: #fff;
