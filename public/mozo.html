@@ -219,6 +219,8 @@
                 if (pedido.estado === 'entregado' || pedido.estado === 'rechazado') pedidos.delete(pedido.id);
                 else pedidos.set(pedido.id, pedido);
                 render();
+                // Suena cuando cocina marca listo: hay que ir a retirar
+                if (pedido.estado === 'listo') avisar();
             });
         }
 
@@ -486,20 +488,27 @@
 
         // ---------- Alerta sonora y vibración ----------
         function avisar() {
-            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300]);
+            if ('vibrate' in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
             try {
                 audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-                [0, 0.25, 0.5].forEach((t) => {
-                    const o = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    o.connect(g);
-                    g.connect(audioCtx.destination);
-                    o.frequency.value = 880;
-                    g.gain.setValueAtTime(0.25, audioCtx.currentTime + t);
-                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.2);
-                    o.start(audioCtx.currentTime + t);
-                    o.stop(audioCtx.currentTime + t + 0.2);
-                });
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                // 3 rondas de pi-pi-pi alternando tono (~2.5s en total)
+                for (let ronda = 0; ronda < 3; ronda++) {
+                    const base = ronda * 0.85;
+                    [0, 0.22, 0.44].forEach((t, j) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.frequency.value = j % 2 === 0 ? 660 : 880;
+                        const inicio = audioCtx.currentTime + base + t;
+                        g.gain.setValueAtTime(0.001, inicio);
+                        g.gain.exponentialRampToValueAtTime(0.4, inicio + 0.02);
+                        g.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.18);
+                        o.start(inicio);
+                        o.stop(inicio + 0.2);
+                    });
+                }
             } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
         }
         document.addEventListener('click', () => {
