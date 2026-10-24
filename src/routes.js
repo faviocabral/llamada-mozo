@@ -79,11 +79,20 @@ router.post('/api/suscribir', requireMozo, (req, res) => {
     res.status(201).json({ ok: true });
 });
 
-// --- Diagnóstico de push (solo mozo): conteo + envío de prueba a todos ---
+// --- Diagnóstico de push (solo mozo): subs con su clienteId + pedidos recientes ---
 router.get('/api/push-debug', requireMozo, (req, res) => {
     res.json({
-        mozos: store.getSubscriptions().length,
-        mesas: store.getAllMesaSubscriptions().length
+        mozos: store.getSubscriptions().map(s => '…' + s.endpoint.slice(-20)),
+        mesaSubs: store.getAllMesaSubscriptions().map(s => ({
+            mesa: s.mesaCode,
+            clienteId: s.clienteId ? s.clienteId.slice(0, 8) : null,
+            endpoint: '…' + s.endpoint.slice(-20)
+        })),
+        pedidos: (store.getAllPedidos ? store.getAllPedidos() : [])
+            .slice(-10).map(p => ({
+                mesa: p.mesaCode, cliente: p.cliente, estado: p.estado,
+                clienteId: p.clienteId ? p.clienteId.slice(0, 8) : null
+            }))
     });
 });
 

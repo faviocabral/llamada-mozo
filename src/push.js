@@ -51,10 +51,13 @@ const aMesa = (payload, mesaCode) =>
     enviar(payload, store.getMesaSubscriptions(mesaCode), e => store.removeMesaSubscription(e));
 
 // Avisos de estado de UN pedido: solo al dispositivo que lo envió (clienteId).
-// Pedidos sin clienteId (creados antes de esta versión) → broadcast como antes.
+// Fallback: subs sin clienteId (dispositivos con build viejo) reciben broadcast —
+// en cuanto recarguen la app se re-suscriben con su clienteId y se filtran.
 const aPedido = (payload, pedido) => {
     let subs = store.getMesaSubscriptions(pedido.mesaCode);
-    if (pedido.clienteId) subs = subs.filter(s => s.clienteId === pedido.clienteId);
+    if (pedido.clienteId) {
+        subs = subs.filter(s => !s.clienteId || s.clienteId === pedido.clienteId);
+    }
     enviar(payload, subs, e => store.removeMesaSubscription(e));
 };
 

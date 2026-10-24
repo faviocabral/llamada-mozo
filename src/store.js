@@ -182,6 +182,8 @@ module.exports = {
             .sort((a, b) => new Date(a.hora) - new Date(b.hora)),
 
     // Historial visible para la mesa: activos + terminales de las últimas 2h
+    getAllPedidos: () => [...state.pedidos],
+
     getPedidosDeMesa: (mesaCode) => {
         const limite = Date.now() - 2 * 3600 * 1000;
         return state.pedidos
