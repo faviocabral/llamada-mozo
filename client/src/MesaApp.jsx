@@ -27,6 +27,16 @@ const mismaKey = (a, b) => {
 
 export default function MesaApp() {
     const { code } = useParams();
+    // Identidad por dispositivo: los avisos de pedido llegan solo a quien ordenó
+    const [clienteId] = useState(() => {
+        let id = localStorage.getItem('mesaClienteId');
+        if (!id) {
+            id = crypto.randomUUID ? crypto.randomUUID()
+                : Date.now() + '-' + Math.random().toString(16).slice(2);
+            localStorage.setItem('mesaClienteId', id);
+        }
+        return id;
+    });
     const [info, setInfo] = useState(null);
     const [error, setError] = useState(null);
     const [tab, setTab] = useState('home');
@@ -189,7 +199,7 @@ export default function MesaApp() {
             const res = await fetch(`/api/mesa/${encodeURIComponent(code)}/push-sub`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sub)
+                body: JSON.stringify({ ...sub.toJSON(), clienteId })
             });
             setPushEstado(res.ok ? 'activo' : 'pendiente');
             return res.ok;
@@ -226,7 +236,7 @@ export default function MesaApp() {
 
     const enviarPedido = (cliente, nota) => {
         const items = Object.entries(cart).map(([id, cantidad]) => ({ id, cantidad }));
-        socketRef.current.emit('cliente-pedido', { mesa: code, cliente, nota, items }, (res) => {
+        socketRef.current.emit('cliente-pedido', { mesa: code, cliente, clienteId, nota, items }, (res) => {
             if (res && res.ok) {
                 setCart({});
                 setTab('estado');
@@ -275,7 +285,7 @@ export default function MesaApp() {
                     llamando={llamando} onToggleLlamado={toggleLlamado} />
             )}
             {tab === 'estado' && (
-                <EstadoPage info={info} pedidos={pedidos}
+                <EstadoPage info={info} pedidos={pedidos} clienteId={clienteId}
                     pushEstado={pushEstado} onActivarPush={activarPush}
                     llamando={llamando} onToggleLlamado={toggleLlamado}
                     onAgregarMas={() => setTab('menu')} />

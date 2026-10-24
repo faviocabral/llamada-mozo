@@ -50,6 +50,14 @@ const aMozos = (payload) =>
 const aMesa = (payload, mesaCode) =>
     enviar(payload, store.getMesaSubscriptions(mesaCode), e => store.removeMesaSubscription(e));
 
+// Avisos de estado de UN pedido: solo al dispositivo que lo envió (clienteId).
+// Pedidos sin clienteId (creados antes de esta versión) → broadcast como antes.
+const aPedido = (payload, pedido) => {
+    let subs = store.getMesaSubscriptions(pedido.mesaCode);
+    if (pedido.clienteId) subs = subs.filter(s => s.clienteId === pedido.clienteId);
+    enviar(payload, subs, e => store.removeMesaSubscription(e));
+};
+
 function notificarLlamado(call) {
     aMozos({
         title: `⚠️ Llamado — Mesa ${call.mesaNumero || call.mesa}`,
@@ -74,7 +82,7 @@ function notificarPedido(pedido) {
 // ---------- Avisos al CLIENTE de la mesa (seguimiento del pedido) ----------
 
 function notificarPedidoConfirmado(pedido) {
-    aMesa({
+    aPedido({
         title: `✅ Pedido confirmado — Mesa ${pedido.mesaNumero}`,
         body: 'El mozo lo tomó y ya pasó a cocina.',
         tag: `pedido-ok-${pedido.id}`,
@@ -83,7 +91,7 @@ function notificarPedidoConfirmado(pedido) {
 }
 
 function notificarPedidoRechazado(pedido) {
-    aMesa({
+    aPedido({
         title: `❌ Pedido rechazado — Mesa ${pedido.mesaNumero}`,
         body: 'No pudimos tomar tu pedido. Consultá con el mozo.',
         tag: `pedido-no-${pedido.id}`,
@@ -103,7 +111,7 @@ function notificarMozoEnCamino(call) {
 
 // Aviso al CLIENTE de la mesa: cocina empezó a preparar su pedido.
 function notificarPedidoPreparando(pedido) {
-    aMesa({
+    aPedido({
         title: `👨‍🍳 Preparando tu pedido — Mesa ${pedido.mesaNumero}`,
         body: 'Cocina ya está trabajando en tu pedido.',
         tag: `pedido-prep-${pedido.id}`,
@@ -113,7 +121,7 @@ function notificarPedidoPreparando(pedido) {
 
 // Aviso al CLIENTE de la mesa: su pedido pasó a 'listo'.
 function notificarPedidoListo(pedido) {
-    aMesa({
+    aPedido({
         title: `🎉 ¡Tu pedido está listo! — Mesa ${pedido.mesaNumero}`,
         body: 'El mozo ya lo está por llevar a tu mesa.',
         tag: `pedido-listo-${pedido.id}`,

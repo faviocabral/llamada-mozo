@@ -39,7 +39,7 @@ function Stepper({ estado }) {
 
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
-export default function EstadoPage({ info, pedidos, pushEstado, onActivarPush, llamando, onToggleLlamado, onAgregarMas }) {
+export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, llamando, onToggleLlamado, onAgregarMas }) {
     return (
         <div className="page">
             <div className="topbar">
@@ -66,7 +66,11 @@ export default function EstadoPage({ info, pedidos, pushEstado, onActivarPush, l
                         ) : (
                             <Stepper estado={p.estado} />
                         )}
-                        <div className="pedido-cliente">{p.cliente || 'Pedido'}</div>
+                        <div className="pedido-cliente">
+                            {p.cliente || 'Pedido'}
+                            {p.clienteId && p.clienteId === clienteId &&
+                                <span className="chip-mio">Tu pedido</span>}
+                        </div>
                         <div className="pedido-items">
                             {p.items.map((i, idx) => (
                                 <div className="ped-line" key={idx}>

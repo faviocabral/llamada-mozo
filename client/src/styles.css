@@ -288,6 +288,11 @@ body {
 .estado-listo { background: #e8f5e9; color: #2e7d32; }
 .estado-entregado { background: #eceff1; color: #607d8b; }
 .estado-rechazado { background: #ffebee; color: #c62828; }
+.chip-mio {
+    font-size: .68rem; font-weight: 700; color: var(--teal-dark);
+    background: rgba(46,196,182,.18); border-radius: 99px;
+    padding: 2px 8px; margin-left: 8px; vertical-align: middle;
+}
 .pedido-cliente { font-weight: 800; font-size: 17px; margin: 4px 0 8px; }
 .pedido-items { font-size: 13px; color: #666; line-height: 1.7; }
 .ped-line { display: flex; justify-content: space-between; gap: 12px; }

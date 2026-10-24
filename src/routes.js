@@ -47,7 +47,8 @@ router.post('/api/mesa/:code/push-sub', (req, res) => {
     if (!sub || typeof sub.endpoint !== 'string' || !sub.endpoint || typeof sub.keys !== 'object' || !sub.keys) {
         return res.status(400).json({ error: 'Suscripción inválida' });
     }
-    store.addMesaSubscription(mesa.id, { endpoint: sub.endpoint, keys: sub.keys });
+    store.addMesaSubscription(mesa.id, { endpoint: sub.endpoint, keys: sub.keys },
+        String(sub.clienteId || '').slice(0, 64));
     res.status(201).json({ ok: true });
 });
 

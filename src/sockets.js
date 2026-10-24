@@ -153,7 +153,9 @@ module.exports = function registerSockets(io) {
                 mesaCode: info.raw,
                 mesaNumero: info.numero,
                 sucursalId: info.sucursalId,
-                cliente, items, nota, total
+                cliente,
+                clienteId: String(data.clienteId || '').slice(0, 64),
+                items, nota, total
             });
             console.log(`🍽️ Pedido nuevo: Mesa ${info.numero} — ${items.length} items ($${total})`);
             io.to(salaMozos(info.sucursalId)).emit('pedido-nuevo', pedido);

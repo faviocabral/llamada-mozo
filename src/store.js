@@ -189,13 +189,15 @@ module.exports = {
             .sort((a, b) => new Date(b.hora) - new Date(a.hora));
     },
 
-    addPedido({ mesaCode, mesaNumero, sucursalId, cliente, items, nota, total }) {
+    addPedido({ mesaCode, mesaNumero, sucursalId, cliente, clienteId, items, nota, total }) {
         const pedido = {
             id: crypto.randomUUID(),
             mesaCode,
             mesaNumero,
             sucursalId,
             cliente: cliente || '',
+            // Dispositivo que envió el pedido: los avisos push de estado van solo a él
+            clienteId: clienteId || '',
             items,
             nota: nota || '',
             total,
@@ -240,7 +242,7 @@ module.exports = {
 
     getAllMesaSubscriptions: () => [...state.mesaSubscriptions],
 
-    addMesaSubscription(mesaCode, sub) {
+    addMesaSubscription(mesaCode, sub, clienteId) {
         // Un endpoint solo puede estar ligado a una mesa a la vez (p.ej. si el
         // mismo celular escanea otro QR, la última suscripción gana)
         state.mesaSubscriptions = state.mesaSubscriptions.filter(s => s.endpoint !== sub.endpoint);
@@ -248,6 +250,8 @@ module.exports = {
             endpoint: sub.endpoint,
             keys: sub.keys,
             mesaCode,
+            // Dispositivo dueño de la sub: filtra los avisos de pedido por persona
+            clienteId: clienteId || '',
             createdAt: new Date().toISOString()
         });
         persist();
