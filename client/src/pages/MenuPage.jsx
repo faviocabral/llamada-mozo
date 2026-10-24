@@ -2,6 +2,27 @@ import React, { useState } from 'react';
 
 const gs = (n) => 'Gs. ' + n.toLocaleString('es-PY');
 
+// Icono por categoría (palabras clave, pensado para fast food)
+const ICONOS_CAT = [
+    [/hamburguesa|burger|lomito|sandwich|s[aá]nguche/i, '🍔'],
+    [/pizza/i, '🍕'],
+    [/papa|frita|nugget/i, '🍟'],
+    [/pancho|hot.?dog|chorip/i, '🌭'],
+    [/pollo|broaster|alita/i, '🍗'],
+    [/entrada|tapeo|picada|aperitivo/i, '🥟'],
+    [/ensalada|verdura|veggie|vegetar/i, '🥗'],
+    [/parrilla|asado|carne|costilla/i, '🥩'],
+    [/pasta|fideo|[ñn]oqui|lasagna/i, '🍝'],
+    [/pescado|marisco/i, '🐟'],
+    [/bebida|drink|refresco|gaseosa|cerveza|trago|jugo|agua|caf[eé]/i, '🥤'],
+    [/postre|dulce|helado|flan|torta/i, '🍰'],
+    [/combo|promo/i, '🎁'],
+    [/desayuno|merienda/i, '🥐'],
+    [/kids|ni[ñn]/i, '🧒'],
+    [/extra|adicional|acompa/i, '➕']
+];
+const iconoCat = (cat) => (ICONOS_CAT.find(([re]) => re.test(cat)) || [null, '🍴'])[1];
+
 // Pantalla 2 del mock: lista por categorías con stepper a la derecha
 // y barra de acción fija arriba del tab bar.
 // Carrusel de chips arriba para filtrar por categoría.
@@ -32,20 +53,20 @@ export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando
                     <button
                         className={'chip' + (!catSel ? ' active' : '')}
                         onClick={() => setCatSel(null)}
-                    >Todas</button>
+                    >✨ Todas</button>
                     {cats.map(c => (
                         <button
                             key={c}
                             className={'chip' + (catSel === c ? ' active' : '')}
                             onClick={() => setCatSel(catSel === c ? null : c)}
-                        >{c}</button>
+                        >{iconoCat(c)} {c}</button>
                     ))}
                 </div>
             </div>
             <div className="page-inner">
                 {visibles.map(cat => (
                     <div key={cat}>
-                        <div className="cat-title">{cat}</div>
+                        <div className="cat-title">{iconoCat(cat)} {cat}</div>
                         {porCat[cat].map(item => (
                             <div className={'item-row' + (cart[item.id] ? ' sel' : '')} key={item.id}>
                                 <div className="item-info">
