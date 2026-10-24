@@ -273,7 +273,7 @@ export default function MesaApp() {
 
     return (
         <>
-            {tab === 'home' && <Home info={info} onVerMenu={() => setTab('menu')} />}
+            {tab === 'home' && <Home info={info} />}
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
                     goPedido={() => setTab('pedido')}

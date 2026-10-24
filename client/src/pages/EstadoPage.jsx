@@ -106,15 +106,17 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                                 <span className="quien">{p.cliente || 'Pedido'}</span>
                                 <span className="estado-chip estado-rechazado">{ESTADOS.rechazado}</span>
                             </div>
-                        ) : !(p.partidas || []).length || p.partidas.some(pt => pt.estacion === 'cocina') ? (
-                            // Stepper solo cuando hay comida (o pedido viejo sin partidas)
-                            <Stepper estado={p.estado} />
-                        ) : null}
-                        <div className="pedido-cliente">
-                            {p.cliente || 'Pedido'}
-                            {p.clienteId && p.clienteId === clienteId &&
-                                <span className="chip-mio">Tu pedido</span>}
-                        </div>
+                        ) : (
+                            <>
+                                <div className="pedido-cliente">
+                                    {p.cliente || 'Pedido'}
+                                    {p.clienteId && p.clienteId === clienteId &&
+                                        <span className="chip-mio">Tu pedido</span>}
+                                </div>
+                                {(!(p.partidas || []).length || p.partidas.some(pt => pt.estacion === 'cocina')) &&
+                                    <Stepper estado={p.estado} />}
+                            </>
+                        )}
                         {/* Comida → stepper; bebidas u otras estaciones → línea compacta */}
                         {p.estado !== 'rechazado' && (p.partidas || []).length > 1 ? (
                             p.partidas.map(pt => <FilaPartida pt={pt} key={pt.id} />)
