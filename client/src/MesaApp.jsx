@@ -38,6 +38,33 @@ export default function MesaApp() {
     const socketRef = useRef(null);
     const toastTimer = useRef(null);
     const estadosPrevios = useRef(new Map());
+    const audioRef = useRef(null);
+
+    // Chime suave tipo notificación (no alarma): suena con la app abierta.
+    // El navegador lo habilita recién tras la primera interacción del usuario.
+    const sonarAviso = () => {
+        try {
+            if (!audioRef.current) {
+                audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const ctx = audioRef.current;
+            if (ctx.state === 'suspended') ctx.resume();
+            [880, 1174].forEach((freq, i) => {   // ding-ding agudo y corto
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.value = freq;
+                o.connect(g);
+                g.connect(ctx.destination);
+                const t = ctx.currentTime + i * 0.15;
+                g.gain.setValueAtTime(0.001, t);
+                g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+                o.start(t);
+                o.stop(t + 0.45);
+            });
+        } catch (e) { /* audio bloqueado hasta que el usuario interactúe */ }
+    };
 
     const avisar = (msg, tipo = '') => {
         clearTimeout(toastTimer.current);
@@ -70,22 +97,41 @@ export default function MesaApp() {
         socket.on('mozo-en-camino', () => {
             setLlamando(false);
             avisar('✅ ¡El mozo vio tu llamado y está en camino!', 'ok');
+            sonarAviso();
             if ('vibrate' in navigator) navigator.vibrate([200]);
         });
         socket.on('llamado-reactivado', () => {
             setLlamando(true);
             avisar('⏳ Tu llamado sigue pendiente — el mozo aún no llegó.');
+            sonarAviso();
         });
         socket.on('pedido-actualizado', (pedido) => {
             const previo = estadosPrevios.current.get(pedido.id);
             estadosPrevios.current.set(pedido.id, pedido.estado);
+            // Ding en cada avance: confirmado, preparando, listo, rechazado
+            if (pedido.estado !== previo && previo !== undefined) {
+                sonarAviso();
+            }
             if (pedido.estado === 'listo' && previo !== 'listo') {
                 avisar('🎉 ¡Tu pedido está listo!', 'ok');
                 if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
             }
             setPedidos(lista => upsertPedido(lista, pedido));
         });
-        return () => socket.disconnect();
+        // El audio queda habilitado desde la primera interacción del usuario
+        const desbloquearAudio = () => {
+            try {
+                if (!audioRef.current) {
+                    audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioRef.current.state === 'suspended') audioRef.current.resume();
+            } catch (e) {}
+        };
+        document.addEventListener('pointerdown', desbloquearAudio);
+        return () => {
+            document.removeEventListener('pointerdown', desbloquearAudio);
+            socket.disconnect();
+        };
     }, [code]);
 
     // ---------- Push "pedido listo" ----------
