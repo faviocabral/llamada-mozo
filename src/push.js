@@ -12,7 +12,10 @@ webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 //   PUSH_TLS_INSECURE=true   -> no verifica el cert en requests a FCM
 //   EXTRA_CA_CERT=./ca.pem   -> confía además en una CA propia
 //   HTTPS_PROXY=http://...   -> sale a internet vía un proxy explícito
-const pushOptions = {};
+// urgency 'high' = FCM prioridad alta: entrega inmediata aunque el teléfono
+// esté en doze/ahorro de batería (con 'normal' Android lo retiene hasta
+// que la app despierta). TTL 10min: un aviso de pedido viejo ya no sirve.
+const pushOptions = { urgency: 'high', TTL: 600 };
 if (process.env.PUSH_TLS_INSECURE === 'true') {
     pushOptions.agent = new https.Agent({ rejectUnauthorized: false });
     console.log('⚠️  PUSH_TLS_INSECURE activo: TLS sin verificar solo en envíos push a FCM.');
