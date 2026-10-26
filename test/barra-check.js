@@ -15,7 +15,7 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     // Pedido con comida + bebida adelantada → 2 partidas, barra urgente
     const res = await emitAck(mesa, 'cliente-pedido', {
         mesa: 'm5', cliente: 'Test', adelantar: 'barra',
-        items: [{ id: 'p1', cantidad: 1 }, { id: 'b2', variante: 'v500', cantidad: 2 }]
+        items: [{ id: 'm1', cantidad: 1 }, { id: 'b2', variante: 'v500', cantidad: 2 }]
     });
     const p = res.pedido;
     console.log('partidas:', p.partidas.map(pt => `${pt.estacion}[${pt.items.length} items, ${pt.estado}]`));

@@ -266,12 +266,12 @@ async function main() {
     const esperaPedido = mozo.waitFor('pedido-nuevo');
     const resPedido = await mesa.emitAck('cliente-pedido', {
         mesa: 'm5', cliente: 'Juan', nota: 'sin cebolla',
-        items: [{ id: 'p1', cantidad: 2 }, { id: 'b2', cantidad: 1, variante: 'v1l' }]
+        items: [{ id: 'm4', cantidad: 2 }, { id: 'b2', cantidad: 1, variante: 'v1l' }]
     });
     assert(resPedido.ok === true, 'pedido válido debe responder ok');
-    assert(resPedido.pedido.total === 2 * 38000 + 12000, 'el total lo calcula el servidor (precio de la variante)');
+    assert(resPedido.pedido.total === 2 * 20000 + 11000, 'el total lo calcula el servidor (precio de la variante)');
     const itVar = resPedido.pedido.items.find(i => i.id === 'b2');
-    assert(itVar && itVar.variante === '1 litro' && itVar.precio === 12000,
+    assert(itVar && itVar.variante === '1 litro' && itVar.precio === 11000,
         'la variante queda grabada con su nombre y precio');
     const pedido = await esperaPedido;
     assert(pedido.mesaNumero === '5' && pedido.cliente === 'Juan', 'pedido-nuevo debe traer mesa y cliente');
@@ -324,7 +324,7 @@ async function main() {
     ok('mozo marca entregado → estado final');
 
     // 22. Rechazo: segundo pedido, el mozo lo rechaza → mesa recibe 'rechazado'
-    const resPed2 = await mesa.emitAck('cliente-pedido', { mesa: 'm5', items: [{ id: 'b1', cantidad: 1 }] });
+    const resPed2 = await mesa.emitAck('cliente-pedido', { mesa: 'm5', items: [{ id: 'm1', cantidad: 1 }] });
     assert(resPed2.ok === true, 'segundo pedido debe responder ok');
     const esperaRech = mesa.waitFor('pedido-actualizado', 5000, p => p.estado === 'rechazado');
     const resRech = await mozo.emitAck('mozo-pedido-rechazado', { id: resPed2.pedido.id });
