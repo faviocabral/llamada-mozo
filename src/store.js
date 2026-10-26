@@ -303,6 +303,18 @@ module.exports = {
         return { pedido: p, partida: pt };
     },
 
+    // El cliente confirma que recibió una partida entregada (control cruzado).
+    // `recibido` es un flag sobre la partida, no otro estado del flujo.
+    setPartidaRecibida(pedidoId, ref) {
+        const p = state.pedidos.find(x => x.id === pedidoId);
+        if (!p) return null;
+        const pt = (p.partidas || []).find(x => x.id === ref || x.estacion === ref);
+        if (!pt || pt.estado !== 'entregado' || pt.recibido) return null;
+        pt.recibido = true;
+        persist();
+        return { pedido: p, partida: pt };
+    },
+
     // --- Suscripciones push (una por dispositivo de mozo) ---
     getSubscriptions: () => [...state.subscriptions],
 

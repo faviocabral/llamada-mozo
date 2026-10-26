@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const gs = (n) => 'Gs. ' + n.toLocaleString('es-PY');
 
@@ -26,12 +26,19 @@ const iconoCat = (cat) => (ICONOS_CAT.find(([re]) => re.test(cat)) || [null, '�
 // Pantalla 2 del mock: lista por categorías con stepper a la derecha
 // y barra de acción fija arriba del tab bar.
 // Carrusel de chips arriba para filtrar por categoría.
-export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando, onToggleLlamado }) {
-    const [catSel, setCatSel] = useState(null); // null = todas
+const CAT_BEBIDA = /bebida|drink|refresco|gaseosa|cerveza|trago|jugo|agua|caf[eé]/i;
 
+export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando, onToggleLlamado, catInicial, onCatUsada }) {
     const porCat = {};
     (info.menu || []).forEach(i => { (porCat[i.categoria] = porCat[i.categoria] || []).push(i); });
     const cats = Object.keys(porCat);
+
+    // '__bebidas' = atajo desde Estado: abre el menú ya filtrado a bebidas
+    const [catSel, setCatSel] = useState(() =>
+        catInicial === '__bebidas' ? (cats.find(c => CAT_BEBIDA.test(c)) || null)
+            : (catInicial && cats.includes(catInicial) ? catInicial : null));
+    useEffect(() => { if (catInicial) onCatUsada && onCatUsada(); }, []);
+
     const visibles = catSel && porCat[catSel] ? [catSel] : cats;
 
     const count = Object.values(cart).reduce((a, b) => a + b, 0);

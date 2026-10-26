@@ -311,6 +311,12 @@ button.home-push:active { transform: scale(.96); }
 .partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); }
 .partida-chip { font-size: .7rem; font-weight: 800; color: #ef6c00; background: #fff3e0; border-radius: 99px; padding: 3px 10px; }
 .partida-chip.done { color: var(--teal-dark); background: rgba(46,196,182,.18); }
+button.partida-chip.confirmar {
+    border: none; font-family: inherit; cursor: pointer;
+    color: #fff; background: var(--orange); padding: 6px 12px; font-size: .72rem;
+    animation: chipPulso 1.4s ease-in-out infinite;
+}
+@keyframes chipPulso { 50% { opacity: .72; } }
 .chip-mio {
     font-size: .68rem; font-weight: 700; color: var(--teal-dark);
     background: rgba(46,196,182,.18); border-radius: 99px;

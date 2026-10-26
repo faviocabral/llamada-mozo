@@ -216,5 +216,20 @@ module.exports = function registerSockets(io) {
         socket.on('barra-partida-listo', avanzarPartida('barra', 'listo'));
         // El mozo entrega una partida puntual (p.ej. bebidas servidas por él)
         socket.on('mozo-partida-entregado', avanzarPartida(null, 'entregado'));
+
+        // Control cruzado: el cliente confirma que recibió la partida
+        // (p.ej. la bebida que el mozo ya le llevó).
+        socket.on('cliente-partida-recibida', (data, cb) => {
+            const info = resolverMesa(data && data.mesa);
+            if (!info) return ack(cb, { ok: false, error: 'Mesa inválida' });
+            const res = store.setPartidaRecibida(String((data && data.id) ?? ''),
+                String((data && (data.estacion || data.partidaId)) ?? ''));
+            if (!res) return ack(cb, { ok: false, error: 'Partida inexistente o aún no entregada' });
+            const { pedido, partida } = res;
+            console.log(`✓✓ Cliente confirmó recepción (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
+            io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
+            io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            ack(cb, { ok: true });
+        });
     });
 };

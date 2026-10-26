@@ -42,6 +42,14 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     console.log('mozo entrega barra:', ent.pedido.partidas.map(pt => `${pt.estacion}:${pt.estado}`).join(' '));
     console.assert(ent.pedido.estado === 'preparando', 'pedido sigue en preparando');
 
+    // Confirmación del cliente (control cruzado): rechaza si no entregó,
+    // acepta cuando la partida ya está entregada
+    const antes = await emitAck(mesa, 'cliente-partida-recibida', { mesa: 'm5', id: p.id, estacion: 'cocina' });
+    console.assert(!antes.ok, 'no puede confirmar comida no entregada');
+    const rec = await emitAck(mesa, 'cliente-partida-recibida', { mesa: 'm5', id: p.id, estacion: 'barra' });
+    console.assert(rec.ok, 'cliente confirma recepción de la bebida');
+    console.log('cliente confirmó barra: recibido =', rec && rec.ok);
+
     mozo.close(); mesa.close();
     console.log('✅ flujo por estaciones OK');
     process.exit(0);

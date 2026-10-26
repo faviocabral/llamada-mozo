@@ -50,17 +50,24 @@ const ESTADO_COMPACTO = {
 
 // Partidas dentro de la card: solo título + items. El estado de la comida
 // lo muestra el stepper principal de la card; las demás estaciones llevan
-// un chip compacto (bebidas, etc).
-function FilaPartida({ pt, primera }) {
+// un chip compacto (bebidas, etc). Cuando el mozo marca una partida como
+// entregada, el cliente confirma la recepción (control cruzado).
+function FilaPartida({ pt, primera, onConfirma }) {
     const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
     return (
         <div className={'partida-block' + (primera ? ' primera' : '')}>
             <div className="partida-head">
                 <span className="partida-titulo">{lbl.ico} {lbl.nombre}</span>
-                {pt.estacion !== 'cocina' &&
-                    <span className={'partida-chip' + (pt.estado === 'entregado' ? ' done' : '')}>
+                {pt.estado === 'entregado' ? (
+                    pt.recibido
+                        ? <span className="partida-chip done">Recibida ✓✓</span>
+                        : <button className="partida-chip confirmar"
+                            onClick={() => onConfirma(pt)}>¿Ya la recibiste? Tocá ✓</button>
+                ) : pt.estacion !== 'cocina' && (
+                    <span className="partida-chip">
                         {ESTADO_COMPACTO[pt.estado] || pt.estado}
-                    </span>}
+                    </span>
+                )}
             </div>
             <ItemsPartida items={pt.items} />
         </div>
@@ -82,7 +89,7 @@ function ItemsPartida({ items }) {
 
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
-export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas }) {
+export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas, onPedirBebidas, onConfirmaEntrega }) {
     return (
         <div className="page">
             <div className="topbar">
@@ -119,11 +126,13 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                                     <Stepper estado={(p.partidas || []).find(pt => pt.estacion === 'cocina')?.estado || p.estado} />}
                             </>
                         )}
-                        {/* Comida → stepper; bebidas u otras estaciones → línea compacta */}
-                        {p.estado !== 'rechazado' && (p.partidas || []).length > 1 ? (
-                            p.partidas.map((pt, i) => <FilaPartida pt={pt} key={pt.id} primera={i === 0} />)
-                        ) : p.estado !== 'rechazado' && p.partidas && p.partidas.length === 1 && p.partidas[0].estacion !== 'cocina' ? (
-                            <FilaPartida pt={p.partidas[0]} primera />
+                        {/* Una fila por partida: título + items + chip/botón
+                            de confirmar recepción cuando el mozo entregó */}
+                        {p.estado !== 'rechazado' && (p.partidas || []).length ? (
+                            p.partidas.map((pt, i) => (
+                                <FilaPartida pt={pt} key={pt.id} primera={i === 0}
+                                    onConfirma={(x) => onConfirmaEntrega(p.id, x)} />
+                            ))
                         ) : (
                             <ItemsPartida items={p.items} />
                         )}
@@ -138,9 +147,14 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                 ))}
 
                 {pedidos.length > 0 && (
-                    <button className="push-btn" onClick={onAgregarMas}>
-                        ➕ ¿Querés agregar algo más? Armá otro pedido desde el Menú
-                    </button>
+                    <>
+                        <button className="push-btn" onClick={onPedirBebidas}>
+                            🥤 ¿Se te antoja una bebida? Pedila acá y sale directo
+                        </button>
+                        <button className="push-btn" onClick={onAgregarMas}>
+                            ➕ ¿Querés agregar algo más? Armá otro pedido desde el Menú
+                        </button>
+                    </>
                 )}
 
                 {iosSinInstalar && pushEstado !== 'activo' && (

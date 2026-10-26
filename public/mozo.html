@@ -63,6 +63,8 @@
         .partida-fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: rgba(255,255,255,.05); border-radius: 8px; padding: 9px 12px; margin-top: 10px; }
         .partida-info { font-size: 13px; color: #ccc; font-weight: 600; }
         .partida-fila .pedido-btn { padding: 9px 14px; font-size: 12px; }
+        .partida-recibida { font-size: 11px; font-weight: 700; color: #999; white-space: nowrap; }
+        .partida-recibida.ok { color: #2ec4b6; }
         /* Stepper de seguimiento (mismo formato que la app del cliente, tema oscuro) */
         .steps { display: flex; align-items: flex-start; margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #444; }
         .step { display: flex; flex-direction: column; align-items: center; width: 46px; flex-shrink: 0; }
@@ -425,7 +427,7 @@
                 const partidas = p.partidas || [];
                 const multi = partidas.length > 1;
                 partidas.forEach(pt => {
-                    if (pt.estado === 'entregado' || pt.estado === 'rechazado') return;
+                    if (pt.estado === 'rechazado') return;
                     const fila = document.createElement('div');
                     fila.className = 'partida-fila';
                     const info = document.createElement('span');
@@ -433,6 +435,15 @@
                     const lbl = ESTACION_LBL[pt.estacion] || ESTACION_LBL.cocina;
                     info.textContent = (multi ? lbl.ico + ' ' + lbl.nombre + ' — ' : '') + (ESTADO_PT[pt.estado] || pt.estado);
                     fila.appendChild(info);
+                    // Entregada: espera la confirmación del cliente (control cruzado)
+                    if (pt.estado === 'entregado') {
+                        const chk = document.createElement('span');
+                        chk.className = 'partida-recibida' + (pt.recibido ? ' ok' : '');
+                        chk.textContent = pt.recibido ? '✓✓ Cliente confirmó' : '⏳ Espera cliente';
+                        fila.appendChild(chk);
+                        card.appendChild(fila);
+                        return;
+                    }
                     // El mozo puede entregar: barra cuando quiera (la sirve él),
                     // cocina solo cuando está lista para retirar
                     const puedeEntregar = pt.estacion === 'barra'

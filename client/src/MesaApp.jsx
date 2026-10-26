@@ -276,6 +276,18 @@ export default function MesaApp() {
     });
     const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
+    // Categoría inicial del menú (para el atajo "pedir bebidas" desde Estado)
+    const [menuCat, setMenuCat] = useState(null);
+    const pedirBebidas = () => { setMenuCat('__bebidas'); setTab('menu'); };
+
+    // Control cruzado: el cliente confirma que recibió una partida
+    const confirmarEntrega = (pedidoId, estacion) => {
+        socketRef.current.emit('cliente-partida-recibida',
+            { mesa: code, id: pedidoId, estacion }, (res) => {
+                if (res && res.ok) avisar('✓ Recibo confirmado', 'ok');
+            });
+    };
+
     const enviarPedido = (cliente, nota) => {
         const items = Object.entries(cart).map(([id, cantidad]) => ({ id, cantidad }));
         socketRef.current.emit('cliente-pedido', { mesa: code, cliente, clienteId, nota, items }, (res) => {
@@ -323,6 +335,7 @@ export default function MesaApp() {
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
                     goPedido={() => setTab('pedido')}
+                    catInicial={menuCat} onCatUsada={() => setMenuCat(null)}
                     llamando={llamando} onToggleLlamado={toggleLlamado} />
             )}
             {tab === 'pedido' && (
@@ -335,7 +348,9 @@ export default function MesaApp() {
                     pushEstado={pushEstado} onActivarPush={activarPush}
                     iosSinInstalar={iosSinInstalar}
                     llamando={llamando} onToggleLlamado={toggleLlamado}
-                    onAgregarMas={() => setTab('menu')} />
+                    onAgregarMas={() => setTab('menu')}
+                    onPedirBebidas={pedirBebidas}
+                    onConfirmaEntrega={confirmarEntrega} />
             )}
 
             {/* En las tabs con topbar la campana va dentro de la barra;
