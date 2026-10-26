@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 
 const gs = (n) => 'Gs. ' + n.toLocaleString('es-PY');
+const CAT_BEBIDA = /bebida|drink|refresco|gaseosa|cerveza|trago|jugo|agua|caf[eé]/i;
 
 // Tab Pedido: carrito editable + envío. El seguimiento de pedidos ya hechos
 // vive en la pestaña Estado.
 export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, llamando, onToggleLlamado }) {
     const [cliente, setCliente] = useState(localStorage.getItem('mesaCliente') || '');
     const [nota, setNota] = useState('');
+    const [adelantar, setAdelantar] = useState(false);
 
     const items = (info.menu || []).filter(i => cart[i.id]);
     const count = items.reduce((s, i) => s + cart[i.id], 0);
     const total = items.reduce((s, i) => s + cart[i.id] * i.precio, 0);
+    const hayBebida = items.some(i => CAT_BEBIDA.test(i.categoria || ''));
 
     const enviar = () => {
         localStorage.setItem('mesaCliente', cliente.trim());
-        enviarPedido(cliente.trim(), nota.trim());
+        enviarPedido(cliente.trim(), nota.trim(), adelantar && hayBebida);
         setNota('');
+        setAdelantar(false);
     };
 
     return (
@@ -68,6 +72,16 @@ export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, ll
                                 maxLength={200}
                             />
                         </div>
+                        {hayBebida && (
+                            <label className="check-adelantar">
+                                <input
+                                    type="checkbox"
+                                    checked={adelantar}
+                                    onChange={e => setAdelantar(e.target.checked)}
+                                />
+                                🥤 Traeme la bebida primero, mientras se cocina la comida
+                            </label>
+                        )}
                         <button className="big-btn" onClick={enviar}>
                             ENVIAR PEDIDO · {gs(total)}
                         </button>

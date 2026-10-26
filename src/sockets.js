@@ -155,7 +155,9 @@ module.exports = function registerSockets(io) {
                 sucursalId: info.sucursalId,
                 cliente,
                 clienteId: String(data.clienteId || '').slice(0, 64),
-                items, nota, total
+                items, nota, total,
+                // 'barra' si el cliente pidió su bebida adelantada
+                adelantar: data.adelantar === 'barra' ? 'barra' : null
             });
             console.log(`🍽️ Pedido nuevo: Mesa ${info.numero} — ${items.length} items ($${total})`);
             io.to(salaMozos(info.sucursalId)).emit('pedido-nuevo', pedido);
@@ -229,6 +231,23 @@ module.exports = function registerSockets(io) {
             console.log(`✓✓ Cliente confirmó recepción (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
             io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
             io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            ack(cb, { ok: true });
+        });
+
+        // "Traeme la bebida ya": el cliente adelanta una partida de su pedido.
+        socket.on('cliente-adelanta-partida', (data, cb) => {
+            const info = resolverMesa(data && data.mesa);
+            if (!info) return ack(cb, { ok: false, error: 'Mesa inválida' });
+            const res = store.setPartidaUrgente(String((data && data.id) ?? ''),
+                String((data && (data.estacion || data.partidaId)) ?? ''));
+            if (!res) return ack(cb, { ok: false, error: 'Partida inexistente o ya cerrada' });
+            const { pedido, partida } = res;
+            console.log(`🔥 Partida adelantada (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
+            io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
+            io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            // Aviso dedicado: la alarma del mozo suena y marca la partida urgente
+            io.to(salaMozos(pedido.sucursalId)).emit('partida-adelantada', { pedido, partida });
+            push.notificarPartidaUrgente(pedido, partida);
             ack(cb, { ok: true });
         });
     });

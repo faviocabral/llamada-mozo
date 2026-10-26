@@ -52,7 +52,7 @@ const ESTADO_COMPACTO = {
 // lo muestra el stepper principal de la card; las demás estaciones llevan
 // un chip compacto (bebidas, etc). Cuando el mozo marca una partida como
 // entregada, el cliente confirma la recepción (control cruzado).
-function FilaPartida({ pt, primera, onConfirma }) {
+function FilaPartida({ pt, primera, onConfirma, onAdelanta }) {
     const lbl = PARTIDA_LBL[pt.estacion] || PARTIDA_LBL.cocina;
     return (
         <div className={'partida-block' + (primera ? ' primera' : '')}>
@@ -64,12 +64,19 @@ function FilaPartida({ pt, primera, onConfirma }) {
                         : <button className="partida-chip confirmar"
                             onClick={() => onConfirma(pt)}>¿Ya la recibiste? Tocá ✓</button>
                 ) : pt.estacion !== 'cocina' && (
-                    <span className="partida-chip">
-                        {ESTADO_COMPACTO[pt.estado] || pt.estado}
+                    <span className={'partida-chip' + (pt.urgente ? ' urgente' : '')}>
+                        {pt.urgente ? '🔥 Pedida ya' : (ESTADO_COMPACTO[pt.estado] || pt.estado)}
                     </span>
                 )}
             </div>
             <ItemsPartida items={pt.items} />
+            {/* Adelantar: solo partidas de bebidas aún activas y no urgentes */}
+            {pt.estacion !== 'cocina' && !pt.urgente && onAdelanta &&
+                !['entregado', 'rechazado'].includes(pt.estado) && (
+                    <button className="adelantar-btn" onClick={() => onAdelanta(pt)}>
+                        🔥 Traeme la bebida ya
+                    </button>
+                )}
         </div>
     );
 }
@@ -89,7 +96,7 @@ function ItemsPartida({ items }) {
 
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
-export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas, onPedirBebidas, onConfirmaEntrega }) {
+export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas, onAdelantaPartida, onConfirmaEntrega }) {
     return (
         <div className="page">
             <div className="topbar">
@@ -131,7 +138,8 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                         {p.estado !== 'rechazado' && (p.partidas || []).length ? (
                             p.partidas.map((pt, i) => (
                                 <FilaPartida pt={pt} key={pt.id} primera={i === 0}
-                                    onConfirma={(x) => onConfirmaEntrega(p.id, x)} />
+                                    onConfirma={(x) => onConfirmaEntrega(p.id, x)}
+                                    onAdelanta={(x) => onAdelantaPartida(p.id, x)} />
                             ))
                         ) : (
                             <ItemsPartida items={p.items} />
@@ -147,14 +155,9 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                 ))}
 
                 {pedidos.length > 0 && (
-                    <>
-                        <button className="push-btn" onClick={onPedirBebidas}>
-                            🥤 ¿Se te antoja una bebida? Pedila acá y sale directo
-                        </button>
-                        <button className="push-btn" onClick={onAgregarMas}>
-                            ➕ ¿Querés agregar algo más? Armá otro pedido desde el Menú
-                        </button>
-                    </>
+                    <button className="push-btn" onClick={onAgregarMas}>
+                        ➕ ¿Querés agregar algo más? Armá otro pedido desde el Menú
+                    </button>
                 )}
 
                 {iosSinInstalar && pushEstado !== 'activo' && (

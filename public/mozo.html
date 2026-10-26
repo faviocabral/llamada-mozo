@@ -63,6 +63,8 @@
         .partida-fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: rgba(255,255,255,.05); border-radius: 8px; padding: 9px 12px; margin-top: 10px; }
         .partida-info { font-size: 13px; color: #ccc; font-weight: 600; }
         .partida-fila .pedido-btn { padding: 9px 14px; font-size: 12px; }
+        .partida-fila.urgente { background: rgba(255,87,34,.15); border: 1px solid rgba(255,87,34,.55); animation: pulsoFila 1.4s ease-in-out infinite; }
+        @keyframes pulsoFila { 50% { background: rgba(255,87,34,.28); } }
         .partida-recibida { font-size: 11px; font-weight: 700; color: #999; white-space: nowrap; }
         .partida-recibida.ok { color: #2ec4b6; }
         /* Stepper de seguimiento (mismo formato que la app del cliente, tema oscuro) */
@@ -227,6 +229,12 @@
                 render();
                 // Suena cuando cocina marca listo: hay que ir a retirar
                 if (pedido.estado === 'listo') avisar();
+            });
+            // El cliente pidió adelantar una partida ("traeme la bebida ya")
+            socket.on('partida-adelantada', ({ pedido }) => {
+                pedidos.set(pedido.id, pedido);
+                render();
+                avisar();
             });
         }
 
@@ -429,11 +437,12 @@
                 partidas.forEach(pt => {
                     if (pt.estado === 'rechazado') return;
                     const fila = document.createElement('div');
-                    fila.className = 'partida-fila';
+                    fila.className = 'partida-fila' + (pt.urgente ? ' urgente' : '');
                     const info = document.createElement('span');
                     info.className = 'partida-info';
                     const lbl = ESTACION_LBL[pt.estacion] || ESTACION_LBL.cocina;
-                    info.textContent = (multi ? lbl.ico + ' ' + lbl.nombre + ' — ' : '') + (ESTADO_PT[pt.estado] || pt.estado);
+                    info.textContent = (multi ? lbl.ico + ' ' + lbl.nombre + ' — ' : '')
+                        + (ESTADO_PT[pt.estado] || pt.estado) + (pt.urgente ? ' · 🔥 ¡LA PIDEN YA!' : '');
                     fila.appendChild(info);
                     // Entregada: espera la confirmación del cliente (control cruzado)
                     if (pt.estado === 'entregado') {

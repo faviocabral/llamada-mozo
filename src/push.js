@@ -151,6 +151,17 @@ function notificarPartidaListo(pedido, partida) {
     }, pedido);
 }
 
+// Aviso a los MOZOS: el cliente pide adelantar una partida ("traeme la bebida ya").
+function notificarPartidaUrgente(pedido, partida) {
+    const t = txtEstacion(partida.estacion);
+    aMozos({
+        title: `🔥 Adelantar ${t.nombre} — Mesa ${pedido.mesaNumero}`,
+        body: `El cliente pide ${t.nombre} YA, antes que la comida.`,
+        tag: `urgente-${partida.id}`,
+        url: '/mozo'
+    });
+}
+
 // Aviso a los MOZOS cuando una estación marca una partida lista (ir a buscarla).
 function notificarPedidoListoMozo(pedido, partida) {
     const t = txtEstacion(partida ? partida.estacion : 'cocina');
@@ -188,5 +199,6 @@ async function testEnvio() {
 module.exports = {
     notificarLlamado, notificarPedido, notificarMozoEnCamino, testEnvio,
     notificarPedidoConfirmado, notificarPedidoRechazado,
-    notificarPartidaPreparando, notificarPartidaListo, notificarPedidoListoMozo
+    notificarPartidaPreparando, notificarPartidaListo, notificarPedidoListoMozo,
+    notificarPartidaUrgente
 };

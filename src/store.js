@@ -245,7 +245,12 @@ module.exports = {
             .sort((a, b) => new Date(b.hora) - new Date(a.hora));
     },
 
-    addPedido({ mesaCode, mesaNumero, sucursalId, cliente, clienteId, items, nota, total }) {
+    addPedido({ mesaCode, mesaNumero, sucursalId, cliente, clienteId, items, nota, total, adelantar }) {
+        const partidas = armarPartidas(items);
+        // "Traeme la bebida ya": la partida elegida nace con prioridad
+        if (adelantar) partidas.forEach(pt => {
+            if (pt.estacion === adelantar) pt.urgente = true;
+        });
         const pedido = {
             id: crypto.randomUUID(),
             mesaCode,
@@ -256,7 +261,7 @@ module.exports = {
             clienteId: clienteId || '',
             items,
             // Tickets por estación: cocina/barra avanzan independientes
-            partidas: armarPartidas(items),
+            partidas,
             nota: nota || '',
             total,
             estado: 'nuevo',
@@ -311,6 +316,19 @@ module.exports = {
         const pt = (p.partidas || []).find(x => x.id === ref || x.estacion === ref);
         if (!pt || pt.estado !== 'entregado' || pt.recibido) return null;
         pt.recibido = true;
+        persist();
+        return { pedido: p, partida: pt };
+    },
+
+    // El cliente pide adelantar una partida ("traeme la bebida ya"): queda
+    // marcada urgente para que el mozo la sirva antes que la comida.
+    setPartidaUrgente(pedidoId, ref) {
+        const p = state.pedidos.find(x => x.id === pedidoId);
+        if (!p) return null;
+        const pt = (p.partidas || []).find(x => x.id === ref || x.estacion === ref);
+        const activa = pt && !['entregado', 'rechazado'].includes(pt.estado);
+        if (!activa || pt.urgente) return null;
+        pt.urgente = true;
         persist();
         return { pedido: p, partida: pt };
     },

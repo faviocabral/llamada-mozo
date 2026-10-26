@@ -276,9 +276,14 @@ export default function MesaApp() {
     });
     const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
-    // Categoría inicial del menú (para el atajo "pedir bebidas" desde Estado)
-    const [menuCat, setMenuCat] = useState(null);
-    const pedirBebidas = () => { setMenuCat('__bebidas'); setTab('menu'); };
+    // "Traeme la bebida ya": adelanta la partida de su pedido (prioridad al mozo)
+    const adelantarPartida = (pedidoId, estacion) => {
+        socketRef.current.emit('cliente-adelanta-partida',
+            { mesa: code, id: pedidoId, estacion }, (res) => {
+                if (res && res.ok) avisar('🔥 Pedida ya — el mozo la trae enseguida', 'ok');
+                else avisar('❌ ' + ((res && res.error) || 'No se pudo'), 'err');
+            });
+    };
 
     // Control cruzado: el cliente confirma que recibió una partida
     const confirmarEntrega = (pedidoId, estacion) => {
@@ -288,9 +293,12 @@ export default function MesaApp() {
             });
     };
 
-    const enviarPedido = (cliente, nota) => {
+    const enviarPedido = (cliente, nota, adelantarBebida) => {
         const items = Object.entries(cart).map(([id, cantidad]) => ({ id, cantidad }));
-        socketRef.current.emit('cliente-pedido', { mesa: code, cliente, clienteId, nota, items }, (res) => {
+        socketRef.current.emit('cliente-pedido', {
+            mesa: code, cliente, clienteId, nota, items,
+            adelantar: adelantarBebida ? 'barra' : undefined
+        }, (res) => {
             if (res && res.ok) {
                 setCart({});
                 setTab('estado');
@@ -335,7 +343,6 @@ export default function MesaApp() {
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
                     goPedido={() => setTab('pedido')}
-                    catInicial={menuCat} onCatUsada={() => setMenuCat(null)}
                     llamando={llamando} onToggleLlamado={toggleLlamado} />
             )}
             {tab === 'pedido' && (
@@ -349,7 +356,7 @@ export default function MesaApp() {
                     iosSinInstalar={iosSinInstalar}
                     llamando={llamando} onToggleLlamado={toggleLlamado}
                     onAgregarMas={() => setTab('menu')}
-                    onPedirBebidas={pedirBebidas}
+                    onAdelantaPartida={adelantarPartida}
                     onConfirmaEntrega={confirmarEntrega} />
             )}
 

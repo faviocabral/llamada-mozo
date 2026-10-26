@@ -311,6 +311,20 @@ button.home-push:active { transform: scale(.96); }
 .partida-titulo { font-size: .78rem; font-weight: 800; color: var(--teal-dark); }
 .partida-chip { font-size: .7rem; font-weight: 800; color: #ef6c00; background: #fff3e0; border-radius: 99px; padding: 3px 10px; }
 .partida-chip.done { color: var(--teal-dark); background: rgba(46,196,182,.18); }
+.partida-chip.urgente { color: #fff; background: var(--orange); }
+.adelantar-btn {
+    margin-top: 8px; border: 1.5px dashed var(--orange); background: #fff7f4;
+    color: var(--orange); border-radius: 10px; padding: 8px 12px; width: 100%;
+    font-size: .78rem; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.adelantar-btn:active { transform: scale(.98); }
+.check-adelantar {
+    display: flex; gap: 10px; align-items: flex-start; background: #fff3e8;
+    border: 1.5px solid #ffd9b8; border-radius: 12px; padding: 12px 14px;
+    margin: 0 0 14px; font-size: 13px; font-weight: 700; color: #b34700;
+    line-height: 1.35; cursor: pointer;
+}
+.check-adelantar input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--orange); }
 button.partida-chip.confirmar {
     border: none; font-family: inherit; cursor: pointer;
     color: #fff; background: var(--orange); padding: 6px 12px; font-size: .72rem;

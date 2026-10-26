@@ -12,15 +12,18 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     await new Promise(r => setTimeout(r, 800));
     mesa.emit('unirse-mesa', 'm5');
 
-    // Pedido con comida + bebida → debe partirse en 2 partidas
+    // Pedido con comida + bebida adelantada → 2 partidas, barra urgente
     const res = await emitAck(mesa, 'cliente-pedido', {
-        mesa: 'm5', cliente: 'Test',
+        mesa: 'm5', cliente: 'Test', adelantar: 'barra',
         items: [{ id: 'p1', cantidad: 1 }, { id: 'b2', cantidad: 2 }]
     });
     const p = res.pedido;
     console.log('partidas:', p.partidas.map(pt => `${pt.estacion}[${pt.items.length} items, ${pt.estado}]`));
     console.assert(p.partidas.length === 2, 'DEBE tener 2 partidas');
-    console.assert(p.partidas.find(pt => pt.estacion === 'barra').items.length === 1, 'barra debe tener la bebida');
+    const barraPt = p.partidas.find(pt => pt.estacion === 'barra');
+    console.assert(barraPt.items.length === 1, 'barra debe tener la bebida');
+    console.assert(barraPt.urgente === true, 'barra debe nacer urgente (adelantada)');
+    console.assert(!p.partidas.find(pt => pt.estacion === 'cocina').urgente, 'cocina NO urgente');
 
     // Mozo confirma → ambas partidas pasan a confirmado
     const conf = await emitAck(mozo, 'mozo-pedido-confirmado', { id: p.id });
@@ -49,6 +52,17 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     const rec = await emitAck(mesa, 'cliente-partida-recibida', { mesa: 'm5', id: p.id, estacion: 'barra' });
     console.assert(rec.ok, 'cliente confirma recepción de la bebida');
     console.log('cliente confirmó barra: recibido =', rec && rec.ok);
+
+    // Pedido 2: sin flag → adelantar en vivo desde Estado
+    const res2 = await emitAck(mesa, 'cliente-pedido', {
+        mesa: 'm5', cliente: 'Test2',
+        items: [{ id: 'b2', cantidad: 1 }]
+    });
+    const urg = await emitAck(mesa, 'cliente-adelanta-partida', { mesa: 'm5', id: res2.pedido.id, estacion: 'barra' });
+    console.assert(urg.ok, 'adelantar en vivo debe funcionar');
+    const dup = await emitAck(mesa, 'cliente-adelanta-partida', { mesa: 'm5', id: res2.pedido.id, estacion: 'barra' });
+    console.assert(!dup.ok, 'adelantar dos veces debe fallar');
+    console.log('adelantar en vivo OK (y duplicado rechazado)');
 
     mozo.close(); mesa.close();
     console.log('✅ flujo por estaciones OK');
