@@ -385,7 +385,7 @@
                 const line = document.createElement('div');
                 line.className = 'ped-line';
                 const nombre = document.createElement('span');
-                nombre.textContent = i.cantidad + 'x ' + i.nombre;
+                nombre.textContent = i.cantidad + 'x ' + i.nombre + (i.variante ? ' · ' + i.variante : '');
                 const precio = document.createElement('span');
                 precio.className = 'pl-price';
                 precio.textContent = 'Gs. ' + (i.precio * i.cantidad).toLocaleString('es-PY');

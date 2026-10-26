@@ -255,17 +255,27 @@ async function main() {
     assert(pedMalo.ok === false, 'item inexistente debe rechazarse');
     ok('pedido con item inválido es rechazado');
 
+    // 14b. Ítem con variantes: sin variante o variante inválida → rechazado
+    const sinVar = await mesa.emitAck('cliente-pedido', { mesa: 'm5', items: [{ id: 'b2', cantidad: 1 }] });
+    assert(sinVar.ok === false, 'ítem con variantes sin elegir debe rechazarse');
+    const varMala = await mesa.emitAck('cliente-pedido', { mesa: 'm5', items: [{ id: 'b2', cantidad: 1, variante: 'trucha' }] });
+    assert(varMala.ok === false, 'variante inexistente debe rechazarse');
+    ok('ítem con variantes exige variante válida');
+
     // 15. Pedido válido → mozo recibe pedido-nuevo, total calculado en server
     const esperaPedido = mozo.waitFor('pedido-nuevo');
     const resPedido = await mesa.emitAck('cliente-pedido', {
         mesa: 'm5', cliente: 'Juan', nota: 'sin cebolla',
-        items: [{ id: 'p1', cantidad: 2 }, { id: 'b2', cantidad: 1 }]
+        items: [{ id: 'p1', cantidad: 2 }, { id: 'b2', cantidad: 1, variante: 'v1l' }]
     });
     assert(resPedido.ok === true, 'pedido válido debe responder ok');
-    assert(resPedido.pedido.total === 2 * 38000 + 8000, 'el total lo calcula el servidor');
+    assert(resPedido.pedido.total === 2 * 38000 + 12000, 'el total lo calcula el servidor (precio de la variante)');
+    const itVar = resPedido.pedido.items.find(i => i.id === 'b2');
+    assert(itVar && itVar.variante === '1 litro' && itVar.precio === 12000,
+        'la variante queda grabada con su nombre y precio');
     const pedido = await esperaPedido;
     assert(pedido.mesaNumero === '5' && pedido.cliente === 'Juan', 'pedido-nuevo debe traer mesa y cliente');
-    ok('pedido llega al mozo en tiempo real con total calculado en server');
+    ok('pedido llega al mozo en tiempo real con total y variante calculados en server');
 
     // 16. La mesa consulta sus pedidos
     const resLista = await mesa.emitAck('pedidos-mesa', { mesa: 'm5' });

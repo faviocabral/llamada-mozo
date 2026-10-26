@@ -240,6 +240,41 @@ button.home-push:active { transform: scale(.96); }
 .fab.pendiente { background: #777; }
 .fab:active { transform: scale(.93); }
 
+/* ---------- Hoja de variantes (ítem con tamaños/sabores) ---------- */
+.var-btn {
+    background: var(--teal); color: #fff; border: none; border-radius: 10px;
+    padding: 10px 14px; font-size: 12px; font-weight: 800; cursor: pointer;
+    font-family: inherit; white-space: nowrap; align-self: center;
+}
+.var-btn:active { transform: scale(.95); }
+.sheet-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 40; display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+    background: #fff; width: 100%; max-width: 640px; border-radius: 18px 18px 0 0;
+    padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
+    max-height: 75vh; overflow-y: auto;
+    animation: sheetUp .22s ease-out;
+}
+@keyframes sheetUp { from { transform: translateY(40%); } }
+.sheet-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.sheet-title { font-weight: 800; font-size: 18px; }
+.sheet-desc { font-size: 12px; color: #999; margin-top: 2px; }
+.sheet-cerrar { border: none; background: #f0f0f2; border-radius: 99px; width: 30px; height: 30px; font-size: 14px; cursor: pointer; }
+.variante-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 4px; border-bottom: 1px solid #f0f0f0;
+}
+.variante-nombre { font-weight: 700; font-size: 14px; }
+.variante-precio { font-size: 12px; color: var(--teal-dark); font-weight: 700; }
+.sheet-listo {
+    width: 100%; margin-top: 14px; border: none; border-radius: 12px;
+    background: var(--teal); color: #fff; padding: 14px; font-size: 15px;
+    font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.sheet-listo:active { transform: scale(.98); }
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;

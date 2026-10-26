@@ -117,14 +117,30 @@ function seed() {
         sucursalId: 's1'
     }));
     state.menu = [
-        { id: 'e1', sucursalId: 's1', categoria: 'Entradas', nombre: 'Empanadas de carne', descripcion: 'Orden de 3 unidades, carne vacuna', precio: 15000, disponible: true },
+        { id: 'e1', sucursalId: 's1', categoria: 'Empanadas', nombre: 'Empanada', descripcion: 'Fritas, relleno casero', disponible: true,
+            variantes: [
+                { id: 'carne', nombre: 'Carne', precio: 5000 },
+                { id: 'jyq', nombre: 'Jamón y queso', precio: 5000 },
+                { id: 'choclo', nombre: 'Choclo', precio: 5000 },
+                { id: 'pollo', nombre: 'Pollo catupiry', precio: 6000 }
+            ] },
         { id: 'e2', sucursalId: 's1', categoria: 'Entradas', nombre: 'Provoleta', descripcion: 'Queso provolone a la plancha con orégano', precio: 22000, disponible: true },
         { id: 'e3', sucursalId: 's1', categoria: 'Entradas', nombre: 'Papas rústicas', descripcion: 'Con salsa de la casa', precio: 18000, disponible: true },
         { id: 'p1', sucursalId: 's1', categoria: 'Platos', nombre: 'Lomito completo', descripcion: 'Jamón, queso, huevo y papas fritas', precio: 38000, disponible: true },
         { id: 'p2', sucursalId: 's1', categoria: 'Platos', nombre: 'Milanesa napolitana', descripcion: 'Con puré de papas o ensalada', precio: 42000, disponible: true },
-        { id: 'p3', sucursalId: 's1', categoria: 'Platos', nombre: 'Pizza muzzarella', descripcion: 'Grande, 8 porciones', precio: 35000, disponible: true },
+        { id: 'p3', sucursalId: 's1', categoria: 'Pizzas', nombre: 'Pizza muzzarella', descripcion: 'Salsa, muzza y orégano', disponible: true,
+            variantes: [
+                { id: 'mediana', nombre: 'Mediana (6 porc.)', precio: 28000 },
+                { id: 'grande', nombre: 'Grande (8 porc.)', precio: 35000 },
+                { id: 'xl', nombre: 'Extra grande (10 porc.)', precio: 42000 }
+            ] },
         { id: 'b1', sucursalId: 's1', categoria: 'Bebidas', nombre: 'Cerveza artesanal', descripcion: 'IPA de barril, 500ml', precio: 18000, disponible: true },
-        { id: 'b2', sucursalId: 's1', categoria: 'Bebidas', nombre: 'Gaseosa', descripcion: 'Línea cola o lima, 500ml', precio: 8000, disponible: true },
+        { id: 'b2', sucursalId: 's1', categoria: 'Bebidas', nombre: 'Gaseosa', descripcion: 'Línea cola, lima o naranja', disponible: true,
+            variantes: [
+                { id: 'v500', nombre: '500ml', precio: 8000 },
+                { id: 'v1l', nombre: '1 litro', precio: 12000 },
+                { id: 'v2l', nombre: '2 litros', precio: 16000 }
+            ] },
         { id: 'b3', sucursalId: 's1', categoria: 'Bebidas', nombre: 'Agua mineral', descripcion: 'Con o sin gas, 500ml', precio: 6000, disponible: true },
         { id: 'd1', sucursalId: 's1', categoria: 'Postres', nombre: 'Flan casero', descripcion: 'Con dulce de leche y crema', precio: 14000, disponible: true }
     ];

@@ -163,7 +163,7 @@
 
                 const items = document.createElement('div');
                 items.className = 'ped-items';
-                items.textContent = pt.items.map(i => i.cantidad + 'x ' + i.nombre).join(' · ');
+                items.textContent = pt.items.map(i => i.cantidad + 'x ' + i.nombre + (i.variante ? ' · ' + i.variante : '')).join(' · ');
                 card.appendChild(items);
 
                 if (p.nota) {

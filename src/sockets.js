@@ -141,8 +141,15 @@ module.exports = function registerSockets(io) {
                 if (!item || !Number.isFinite(cantidad) || cantidad < 1 || cantidad > 20) {
                     return ack(cb, { ok: false, error: 'Item inválido en el pedido' });
                 }
-                items.push({ id: item.id, nombre: item.nombre, precio: item.precio, cantidad, categoria: item.categoria });
-                total += item.precio * cantidad;
+                // Ítem con variantes (tamaño/sabor): la variante define el precio
+                let precio = item.precio, variante = '';
+                if (Array.isArray(item.variantes) && item.variantes.length) {
+                    const v = item.variantes.find(x => x.id === String(it.variante));
+                    if (!v) return ack(cb, { ok: false, error: 'Variante inválida' });
+                    precio = v.precio; variante = v.nombre;
+                }
+                items.push({ id: item.id, nombre: item.nombre, variante, precio, cantidad, categoria: item.categoria });
+                total += precio * cantidad;
             }
             if (!items.length) return ack(cb, { ok: false, error: 'Pedido vacío' });
 

@@ -10,10 +10,17 @@ export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, ll
     const [nota, setNota] = useState('');
     const [adelantar, setAdelantar] = useState(false);
 
-    const items = (info.menu || []).filter(i => cart[i.id]);
-    const count = items.reduce((s, i) => s + cart[i.id], 0);
-    const total = items.reduce((s, i) => s + cart[i.id] * i.precio, 0);
-    const hayBebida = items.some(i => CAT_BEBIDA.test(i.categoria || ''));
+    // El carrito se clavea por "itemId" o "itemId|varianteId"
+    const lineas = Object.entries(cart).map(([key, cantidad]) => {
+        const [id, vid] = key.split('|');
+        const item = (info.menu || []).find(i => i.id === id);
+        if (!item) return null;
+        const v = vid && item.variantes ? item.variantes.find(x => x.id === vid) : null;
+        return { key, item, v, cantidad };
+    }).filter(Boolean);
+    const count = lineas.reduce((s, l) => s + l.cantidad, 0);
+    const total = lineas.reduce((s, l) => s + l.cantidad * (l.v ? l.v.precio : l.item.precio), 0);
+    const hayBebida = lineas.some(l => CAT_BEBIDA.test(l.item.categoria || ''));
 
     const enviar = () => {
         localStorage.setItem('mesaCliente', cliente.trim());
@@ -41,16 +48,18 @@ export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, ll
                 {count > 0 && (
                     <>
                         <div className="sec-title">Carrito</div>
-                        {items.map(item => (
-                            <div className="item-row" key={item.id}>
+                        {lineas.map(l => (
+                            <div className="item-row" key={l.key}>
                                 <div className="item-info">
-                                    <div className="item-name">{item.nombre}</div>
-                                    <div className="item-price">{gs(item.precio)} c/u</div>
+                                    <div className="item-name">
+                                        {l.item.nombre}{l.v ? ' · ' + l.v.nombre : ''}
+                                    </div>
+                                    <div className="item-price">{gs(l.v ? l.v.precio : l.item.precio)} c/u</div>
                                 </div>
                                 <div className="stepper">
-                                    <button onClick={() => restar(item.id)}>−</button>
-                                    <span className="qty">{cart[item.id]}</span>
-                                    <button onClick={() => sumar(item.id)}>+</button>
+                                    <button onClick={() => restar(l.key)}>−</button>
+                                    <span className="qty">{l.cantidad}</span>
+                                    <button onClick={() => sumar(l.key)}>+</button>
                                 </div>
                             </div>
                         ))}

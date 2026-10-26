@@ -297,7 +297,11 @@ export default function MesaApp() {
     };
 
     const enviarPedido = (cliente, nota, adelantarBebida) => {
-        const items = Object.entries(cart).map(([id, cantidad]) => ({ id, cantidad }));
+        // Claves del carrito: "itemId" o "itemId|varianteId"
+        const items = Object.entries(cart).map(([key, cantidad]) => {
+            const [id, variante] = key.split('|');
+            return { id, variante: variante || undefined, cantidad };
+        });
         socketRef.current.emit('cliente-pedido', {
             mesa: code, cliente, clienteId, nota, items,
             adelantar: adelantarBebida ? 'barra' : undefined

@@ -86,7 +86,7 @@ function ItemsPartida({ items }) {
         <div className="pedido-items">
             {items.map((i, idx) => (
                 <div className="ped-line" key={idx}>
-                    <span>{i.cantidad}× {i.nombre}</span>
+                    <span>{i.cantidad}× {i.nombre}{i.variante ? ' · ' + i.variante : ''}</span>
                     <span>{gs(i.precio * i.cantidad)}</span>
                 </div>
             ))}

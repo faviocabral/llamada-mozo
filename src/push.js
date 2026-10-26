@@ -82,7 +82,7 @@ function notificarLlamado(call) {
 }
 
 function notificarPedido(pedido) {
-    const resumen = pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
+    const resumen = pedido.items.map(i => `${i.cantidad}x ${i.nombre}${i.variante ? ' ' + i.variante : ''}`).join(', ');
     aMozos({
         title: `🍽️ Pedido — Mesa ${pedido.mesaNumero}`,
         body: resumen.slice(0, 120),
