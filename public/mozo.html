@@ -453,11 +453,12 @@
                         card.appendChild(fila);
                         return;
                     }
-                    // El mozo puede entregar: barra cuando quiera (la sirve él),
-                    // cocina solo cuando está lista para retirar
-                    const puedeEntregar = pt.estacion === 'barra'
-                        ? ['confirmado', 'preparando', 'listo'].includes(pt.estado)
-                        : pt.estado === 'listo';
+                    // El mozo entrega cuando hay motivo: cocina/barra lista para
+                    // retirar, o la bebida urgente que el cliente pidió adelantar
+                    // (la sirve él directo sin esperar a barra)
+                    const puedeEntregar = pt.estado === 'listo' ||
+                        (pt.estacion === 'barra' && pt.urgente &&
+                            ['confirmado', 'preparando'].includes(pt.estado));
                     if (puedeEntregar) {
                         const btn = document.createElement('button');
                         btn.className = 'pedido-btn entregar';

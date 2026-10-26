@@ -74,7 +74,7 @@ function FilaPartida({ pt, primera, onConfirma, onAdelanta }) {
             {pt.estacion !== 'cocina' && !pt.urgente && onAdelanta &&
                 !['entregado', 'rechazado'].includes(pt.estado) && (
                     <button className="adelantar-btn" onClick={() => onAdelanta(pt)}>
-                        🔥 Traeme la bebida ya
+                        🔥 Adelantar ya la bebida
                     </button>
                 )}
         </div>

@@ -276,19 +276,22 @@ export default function MesaApp() {
     });
     const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
-    // "Traeme la bebida ya": adelanta la partida de su pedido (prioridad al mozo)
-    const adelantarPartida = (pedidoId, estacion) => {
+    // "Adelantar ya la bebida": prioriza la partida de su pedido (aviso al mozo)
+    // `pt` puede ser la partida (objeto) o el nombre de la estación (string)
+    const refPartida = (pt) => (typeof pt === 'object' && pt ? (pt.estacion || pt.id) : pt);
+
+    const adelantarPartida = (pedidoId, pt) => {
         socketRef.current.emit('cliente-adelanta-partida',
-            { mesa: code, id: pedidoId, estacion }, (res) => {
+            { mesa: code, id: pedidoId, estacion: refPartida(pt) }, (res) => {
                 if (res && res.ok) avisar('🔥 Pedida ya — el mozo la trae enseguida', 'ok');
                 else avisar('❌ ' + ((res && res.error) || 'No se pudo'), 'err');
             });
     };
 
     // Control cruzado: el cliente confirma que recibió una partida
-    const confirmarEntrega = (pedidoId, estacion) => {
+    const confirmarEntrega = (pedidoId, pt) => {
         socketRef.current.emit('cliente-partida-recibida',
-            { mesa: code, id: pedidoId, estacion }, (res) => {
+            { mesa: code, id: pedidoId, estacion: refPartida(pt) }, (res) => {
                 if (res && res.ok) avisar('✓ Recibo confirmado', 'ok');
             });
     };
