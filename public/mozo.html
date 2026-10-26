@@ -437,12 +437,14 @@
                 partidas.forEach(pt => {
                     if (pt.estado === 'rechazado') return;
                     const fila = document.createElement('div');
-                    fila.className = 'partida-fila' + (pt.urgente ? ' urgente' : '');
+                    // Urgente solo mientras la partida sigue activa; entregada deja de pulsar
+                    const urgente = pt.urgente && pt.estado !== 'entregado';
+                    fila.className = 'partida-fila' + (urgente ? ' urgente' : '');
                     const info = document.createElement('span');
                     info.className = 'partida-info';
                     const lbl = ESTACION_LBL[pt.estacion] || ESTACION_LBL.cocina;
                     info.textContent = (multi ? lbl.ico + ' ' + lbl.nombre + ' — ' : '')
-                        + (ESTADO_PT[pt.estado] || pt.estado) + (pt.urgente ? ' · 🔥 ¡LA PIDEN YA!' : '');
+                        + (ESTADO_PT[pt.estado] || pt.estado) + (urgente ? ' · 🔥 ¡LA PIDEN YA!' : '');
                     fila.appendChild(info);
                     // Entregada: espera la confirmación del cliente (control cruzado)
                     if (pt.estado === 'entregado') {
