@@ -67,6 +67,7 @@
         @keyframes pulsoFila { 50% { background: rgba(255,87,34,.28); } }
         .partida-recibida { font-size: 11px; font-weight: 700; color: #999; white-space: nowrap; }
         .partida-recibida.ok { color: #2ec4b6; }
+        .partida-fila .pedido-btn.cerrar { background: transparent; color: #aaa; border: 1px solid #666; padding: 6px 10px; font-size: 11px; }
         /* Stepper de seguimiento (mismo formato que la app del cliente, tema oscuro) */
         .steps { display: flex; align-items: flex-start; margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #444; }
         .step { display: flex; flex-direction: column; align-items: center; width: 46px; flex-shrink: 0; }
@@ -450,8 +451,21 @@
                     if (pt.estado === 'entregado') {
                         const chk = document.createElement('span');
                         chk.className = 'partida-recibida' + (pt.recibido ? ' ok' : '');
-                        chk.textContent = pt.recibido ? '✓✓ Cliente confirmó' : '⏳ Espera cliente';
+                        chk.textContent = pt.recibido
+                            ? (pt.recibidoPor === 'cliente' || !pt.recibidoPor ? '✓✓ Cliente confirmó' : '✓✓ Recibido')
+                            : '⏳ Espera cliente';
                         fila.appendChild(chk);
+                        if (!pt.recibido) {
+                            const btnCerrar = document.createElement('button');
+                            btnCerrar.className = 'pedido-btn cerrar';
+                            btnCerrar.textContent = 'Cerrar';
+                            btnCerrar.onclick = () => {
+                                socket.emit('mozo-partida-cerrada', { id: p.id, estacion: pt.estacion }, (res) => {
+                                    if (!res.ok && res.error) alert(res.error);
+                                });
+                            };
+                            fila.appendChild(btnCerrar);
+                        }
                         card.appendChild(fila);
                         return;
                     }

@@ -22,7 +22,27 @@ function resolverMesa(valor) {
     return sucursal ? { raw, numero: raw, sucursalId: sucursal.id } : null;
 }
 
+let barridoIniciado = false;
+
 module.exports = function registerSockets(io) {
+    // Autocierre del control cruzado: si el cliente no confirma que recibió
+    // la partida en RECIBIDO_AUTO_MIN minutos (def 10), se marca recibida
+    // sola — el mozo no queda con "⏳ Espera cliente" colgado para siempre.
+    if (!barridoIniciado) {
+        barridoIniciado = true;
+        const MIN = Number(process.env.RECIBIDO_AUTO_MIN || 10);
+        const SWEEP_MS = Number(process.env.RECIBIDO_SWEEP_MS || 30000);
+        const t = setInterval(() => {
+            for (const { pedido, partida } of store.partidasSinConfirmar(MIN)) {
+                if (!store.setPartidaRecibida(pedido.id, partida.id, 'auto')) continue;
+                console.log(`⏱️ Recepción autoconfirmada (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
+                io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
+                io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            }
+        }, SWEEP_MS);
+        if (t.unref) t.unref();
+    }
+
     // Mesa: se conecta sin auth. Mozo: auth { role: 'mozo', key } — clave
     // incorrecta rechaza la conexión para que el cliente pueda repreguntar.
     io.use((socket, next) => {
@@ -236,6 +256,20 @@ module.exports = function registerSockets(io) {
             if (!res) return ack(cb, { ok: false, error: 'Partida inexistente o aún no entregada' });
             const { pedido, partida } = res;
             console.log(`✓✓ Cliente confirmó recepción (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
+            io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
+            io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            ack(cb, { ok: true });
+        });
+
+        // Cierre manual: el mozo vio la entrega en la mesa y cierra la espera
+        // cuando el cliente no confirma desde su app (o se fue distraído).
+        socket.on('mozo-partida-cerrada', (data, cb) => {
+            if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
+            const res = store.setPartidaRecibida(String((data && data.id) ?? ''),
+                String((data && (data.estacion || data.partidaId)) ?? ''), 'mozo');
+            if (!res) return ack(cb, { ok: false, error: 'Partida inexistente o aún no entregada' });
+            const { pedido, partida } = res;
+            console.log(`✓ Partida cerrada por el mozo (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
             io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
             io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
             ack(cb, { ok: true });

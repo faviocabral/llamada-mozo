@@ -291,6 +291,7 @@ module.exports = {
             : pt && (PEDIDO_TRANSICIONES[pt.estado] || []).includes(estado);
         if (!pt || !ok) return null;
         pt.estado = estado;
+        if (estado === 'entregado') pt.entregadoEn = new Date().toISOString();
         p.estado = estadoAgregado(p.partidas);
         if (PEDIDO_TERMINAL.includes(p.estado)) p.entregadoHora = new Date().toISOString();
         persist();
@@ -299,14 +300,32 @@ module.exports = {
 
     // El cliente confirma que recibió una partida entregada (control cruzado).
     // `recibido` es un flag sobre la partida, no otro estado del flujo.
-    setPartidaRecibida(pedidoId, ref) {
+    // `por`: 'cliente' | 'mozo' | 'auto' (timeout sin confirmación).
+    setPartidaRecibida(pedidoId, ref, por = 'cliente') {
         const p = state.pedidos.find(x => x.id === pedidoId);
         if (!p) return null;
         const pt = (p.partidas || []).find(x => x.id === ref || x.estacion === ref);
         if (!pt || pt.estado !== 'entregado' || pt.recibido) return null;
         pt.recibido = true;
+        pt.recibidoPor = por;
         persist();
         return { pedido: p, partida: pt };
+    },
+
+    // Partidas entregadas hace más de `min` minutos sin que el cliente
+    // confirme recepción — el barrido del server las cierra solo.
+    partidasSinConfirmar(min) {
+        const corte = Date.now() - min * 60000;
+        const out = [];
+        for (const p of state.pedidos) {
+            for (const pt of p.partidas || []) {
+                if (pt.estado === 'entregado' && !pt.recibido && pt.entregadoEn
+                    && new Date(pt.entregadoEn).getTime() < corte) {
+                    out.push({ pedido: p, partida: pt });
+                }
+            }
+        }
+        return out;
     },
 
     // El cliente pide adelantar una partida ("traeme la bebida ya"): queda

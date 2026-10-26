@@ -64,6 +64,31 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     console.assert(!dup.ok, 'adelantar dos veces debe fallar');
     console.log('adelantar en vivo OK (y duplicado rechazado)');
 
+    // Pedido 2 sigue: confirmar + entregar → el mozo cierra la espera a mano
+    await emitAck(mozo, 'mozo-pedido-confirmado', { id: res2.pedido.id });
+    const ent2 = await emitAck(mozo, 'mozo-partida-entregado', { id: res2.pedido.id, estacion: 'barra' });
+    console.assert(ent2.ok, 'mozo debe poder entregar la partida adelantada');
+    const cierre = await emitAck(mozo, 'mozo-partida-cerrada', { id: res2.pedido.id, estacion: 'barra' });
+    console.assert(cierre.ok, 'mozo debe poder cerrar la espera del cliente');
+    const lista = await emitAck(mesa, 'pedidos-mesa', { mesa: 'm5' });
+    const pt2 = lista.pedidos.find(x => x.id === res2.pedido.id).partidas[0];
+    console.assert(pt2.recibido === true && pt2.recibidoPor === 'mozo', 'cierre por mozo marca recibido');
+    console.log('cierre manual del mozo OK');
+
+    // Pedido 3: entrega sin confirmación del cliente → autocierre por timeout
+    // (requiere RECIBIDO_AUTO_MIN=0.01 y RECIBIDO_SWEEP_MS=500 en el server)
+    const res3 = await emitAck(mesa, 'cliente-pedido', {
+        mesa: 'm5', cliente: 'Test3',
+        items: [{ id: 'b2', variante: 'v500', cantidad: 1 }]
+    });
+    await emitAck(mozo, 'mozo-pedido-confirmado', { id: res3.pedido.id });
+    await emitAck(mozo, 'mozo-partida-entregado', { id: res3.pedido.id, estacion: 'barra' });
+    await new Promise(r => setTimeout(r, 1500));
+    const lista3 = await emitAck(mesa, 'pedidos-mesa', { mesa: 'm5' });
+    const pt3 = lista3.pedidos.find(x => x.id === res3.pedido.id).partidas[0];
+    console.assert(pt3.recibido === true && pt3.recibidoPor === 'auto', 'timeout debe autoconfirmar la recepción');
+    console.log('autocierre por timeout OK');
+
     mozo.close(); mesa.close();
     console.log('✅ flujo por estaciones OK');
     process.exit(0);
