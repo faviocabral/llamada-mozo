@@ -66,6 +66,11 @@ module.exports = function registerSockets(io) {
             for (const suc of store.getSucursales()) {
                 socket.emit('pedidos-activos', store.getPedidosActivos(suc.id));
             }
+            // Mesas del local + grupos armados (mesa larga) para el panel
+            socket.emit('mesas-panel', {
+                mesas: store.getMesas(),
+                grupos: store.getGruposMesas()
+            });
             console.log(`🟢 Mozo conectado (${socket.id})`);
         }
 
@@ -272,6 +277,29 @@ module.exports = function registerSockets(io) {
             console.log(`✓ Partida cerrada por el mozo (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
             io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
             io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            ack(cb, { ok: true });
+        });
+
+        // ---------- Grupos de mesas (mesa larga, solo vista del mozo) ----------
+        const emitirGrupos = (sucursalId) =>
+            io.to(salaMozos(sucursalId)).emit('grupos-mesas', store.getGruposMesas(sucursalId));
+
+        socket.on('mozo-une-mesas', (data, cb) => {
+            if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
+            const sucursalId = String((data && data.sucursalId) || 's1');
+            const grupo = store.unirMesas(sucursalId, (data && data.mesas) || []);
+            if (!grupo) return ack(cb, { ok: false, error: 'Elegí al menos 2 mesas válidas' });
+            console.log(`🔗 Mesas unidas: ${grupo.mesas.join('+')}`);
+            emitirGrupos(sucursalId);
+            ack(cb, { ok: true, grupo });
+        });
+
+        socket.on('mozo-separa-mesas', (data, cb) => {
+            if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
+            const grupo = store.separarGrupoMesas(String((data && data.id) ?? ''));
+            if (!grupo) return ack(cb, { ok: false, error: 'Grupo inexistente' });
+            console.log(`✂ Mesas separadas: ${grupo.mesas.join('+')}`);
+            emitirGrupos(grupo.sucursalId);
             ack(cb, { ok: true });
         });
 

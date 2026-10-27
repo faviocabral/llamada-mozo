@@ -28,10 +28,22 @@
         .deshacer-btn:active { transform: scale(.96); }
         .historial-btn { background: transparent; color: #64b5f6; border: 1px solid #64b5f6; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px; margin-left: 6px; }
         .historial-btn[hidden] { display: none; }
-        #modal-historial { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 20; }
-        #modal-historial[hidden] { display: none; }
-        .modal-box { background: #2b2b2b; padding: 20px; border-radius: 10px; width: 92%; max-width: 520px; max-height: 80vh; display: flex; flex-direction: column; }
+        #modal-historial, #modal-mesas { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 20; }
+        #modal-historial[hidden], #modal-mesas[hidden] { display: none; }
+        .modal-box { background: #2b2b2b; padding: 20px; border-radius: 10px; width: 92%; max-width: 520px; max-height: 80vh; display: flex; flex-direction: column; overflow-y: auto; }
         .modal-box h2 { margin: 0 0 10px; font-size: 18px; color: #4CAF50; }
+        /* Unión de mesas (mesa larga) */
+        .grupo-box { border: 1px dashed #666; border-radius: 10px; padding: 10px; margin-bottom: 14px; background: rgba(255,255,255,.02); }
+        .grupo-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .grupo-head strong { color: #ffb74d; font-size: 14px; }
+        .grupo-box .tarjeta-pedido { margin-bottom: 10px; }
+        .mesa-chk { display: flex; gap: 10px; padding: 9px 6px; border-bottom: 1px solid #3a3a3a; font-size: 14px; align-items: center; cursor: pointer; }
+        .mesa-chk input { width: 18px; height: 18px; accent-color: #ff5722; }
+        .mesa-chk .en-grupo { margin-left: auto; font-size: 11px; color: #ffb74d; }
+        .grupo-fila { display: flex; justify-content: space-between; align-items: center; padding: 9px 6px; border-bottom: 1px solid #3a3a3a; font-size: 14px; }
+        .grupo-fila button { background: transparent; border: 1px solid #ef5350; color: #ef5350; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+        .modal-sub { color: #999; font-size: 12px; margin: 12px 0 6px; }
+        .unir-btn { width: 100%; margin-top: 12px; padding: 12px; background: #ff5722; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; }
         #contenedor-historial { overflow-y: auto; flex: 1; }
         .cerrar-btn { margin-top: 12px; padding: 10px; background: #444; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
         #titulo-pedidos { color: #ffb74d; font-size: 15px; max-width: 640px; margin: 30px auto 0; }
@@ -94,6 +106,7 @@
         <div>
             <span id="estado-socket" class="badge">Conectando…</span>
             <span id="estado-push" class="badge">Push: …</span>
+            <button id="btn-mesas" class="historial-btn" onclick="abrirMesas()">🔗 Mesas</button>
             <button id="btn-historial" class="historial-btn" hidden onclick="abrirHistorial()"></button>
         </div>
     </header>
@@ -108,6 +121,17 @@
             <h2>📋 Historial de atendidas</h2>
             <div id="contenedor-historial"></div>
             <button class="cerrar-btn" onclick="cerrarHistorial()">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="modal-mesas" hidden>
+        <div class="modal-box">
+            <h2>🔗 Mesas unidas</h2>
+            <div id="contenedor-grupos"></div>
+            <div class="modal-sub">Uní las mesas que el grupo juntó — los pedidos y llamados se ven juntos en el panel</div>
+            <div id="contenedor-mesas"></div>
+            <button class="unir-btn" onclick="unirSel()">Unir seleccionadas</button>
+            <button class="cerrar-btn" onclick="cerrarMesas()">Cerrar</button>
         </div>
     </div>
 
@@ -131,6 +155,9 @@
         let socket = null;
         let pushIniciado = false;
         let filtroPedidos = 'todos';
+        let mesasPanel = [];   // mesas físicas del local
+        let gruposMesas = [];  // uniones virtuales (mesa larga)
+        const mesasSel = new Set();
 
         // Chips de filtro con contadores (como las categorías del menú)
         const GRUPOS_PEDIDO = [
@@ -237,6 +264,18 @@
                 render();
                 avisar();
             });
+
+            // Mesas del local + uniones virtuales (mesa larga)
+            socket.on('mesas-panel', ({ mesas, grupos }) => {
+                mesasPanel = mesas || [];
+                gruposMesas = grupos || [];
+                render();
+            });
+            socket.on('grupos-mesas', (lista) => {
+                gruposMesas = lista || [];
+                render();
+                if (!$('modal-mesas').hidden) renderModalMesas();
+            });
         }
 
         // ---------- UI ----------
@@ -264,7 +303,9 @@
 
                 const info = document.createElement('div');
                 const titulo = document.createElement('strong');
-                titulo.textContent = '⚠️ MESA ' + (call.mesaNumero || call.mesa);
+                const gCall = gruposMesas.find(g => g.mesas.includes(call.mesa));
+                titulo.textContent = '⚠️ MESA ' + (call.mesaNumero || call.mesa)
+                    + (gCall ? '  🔗 ' + labelGrupo(gCall) : '');
                 const hora = document.createElement('small');
                 hora.dataset.hora = call.hora;
                 hora.textContent = horaTexto(call.hora);
@@ -320,7 +361,20 @@
                 .sort((a, b) => (PRIORIDAD[a.estado] - PRIORIDAD[b.estado]) || (new Date(a.hora) - new Date(b.hora)));
             const contPed = $('contenedor-pedidos');
             contPed.innerHTML = '';
-            listaPedidos.forEach(p => contPed.appendChild(crearTarjetaPedido(p)));
+            // Los pedidos de mesas unidas van juntos dentro de un bloque
+            // "Mesa larga", en la posición del primer pedido del grupo.
+            const cajasGrupo = new Map(); // grupoId -> {box, cont}
+            for (const p of listaPedidos) {
+                const g = gruposMesas.find(x => x.mesas.includes(p.mesaCode));
+                if (!g) { contPed.appendChild(crearTarjetaPedido(p)); continue; }
+                let b = cajasGrupo.get(g.id);
+                if (!b) {
+                    b = crearGrupoBox(g);
+                    cajasGrupo.set(g.id, b);
+                    contPed.appendChild(b.box);
+                }
+                b.cont.appendChild(crearTarjetaPedido(p));
+            }
         }
 
         // Stepper (mismo flujo que ve el cliente)
@@ -536,6 +590,92 @@
 
         function abrirHistorial() { $('modal-historial').hidden = false; }
         function cerrarHistorial() { $('modal-historial').hidden = true; }
+
+        // ---------- Mesas unidas (mesa larga) ----------
+        const numeroDe = (code) => {
+            const m = mesasPanel.find(x => x.id === code);
+            return m ? m.numero : String(code).replace(/^m/, '');
+        };
+        const labelGrupo = (g) => 'mesa larga ' + g.mesas.map(numeroDe).join('+');
+
+        function crearGrupoBox(g) {
+            const box = document.createElement('div');
+            box.className = 'grupo-box';
+            const head = document.createElement('div');
+            head.className = 'grupo-head';
+            const t = document.createElement('strong');
+            t.textContent = '🔗 ' + labelGrupo(g).toUpperCase();
+            head.appendChild(t);
+            box.appendChild(head);
+            const cont = document.createElement('div');
+            box.appendChild(cont);
+            return { box, cont };
+        }
+
+        function abrirMesas() { renderModalMesas(); $('modal-mesas').hidden = false; }
+        function cerrarMesas() { $('modal-mesas').hidden = true; mesasSel.clear(); }
+
+        function renderModalMesas() {
+            // Grupos armados con su botón Separar
+            const cg = $('contenedor-grupos');
+            cg.innerHTML = '';
+            if (!gruposMesas.length) {
+                cg.innerHTML = '<div class="modal-sub">Sin mesas unidas.</div>';
+            } else {
+                gruposMesas.forEach(g => {
+                    const f = document.createElement('div');
+                    f.className = 'grupo-fila';
+                    const span = document.createElement('span');
+                    span.innerHTML = '🔗 <strong>' + labelGrupo(g) + '</strong>';
+                    const b = document.createElement('button');
+                    b.textContent = 'Separar';
+                    b.onclick = () => separarGrupo(g.id);
+                    f.appendChild(span);
+                    f.appendChild(b);
+                    cg.appendChild(f);
+                });
+            }
+            // Checkboxes de mesas físicas (marca las que ya están en un grupo)
+            const enGrupo = {};
+            gruposMesas.forEach(g => g.mesas.forEach(c => { enGrupo[c] = labelGrupo(g); }));
+            const cm = $('contenedor-mesas');
+            cm.innerHTML = '';
+            mesasPanel.forEach(m => {
+                const row = document.createElement('label');
+                row.className = 'mesa-chk';
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.checked = mesasSel.has(m.id);
+                chk.onchange = () => chk.checked ? mesasSel.add(m.id) : mesasSel.delete(m.id);
+                const span = document.createElement('span');
+                span.textContent = 'Mesa ' + m.numero;
+                row.appendChild(chk);
+                row.appendChild(span);
+                if (enGrupo[m.id]) {
+                    const tag = document.createElement('span');
+                    tag.className = 'en-grupo';
+                    tag.textContent = '🔗 ' + enGrupo[m.id];
+                    row.appendChild(tag);
+                }
+                cm.appendChild(row);
+            });
+        }
+
+        function unirSel() {
+            if (mesasSel.size < 2) { alert('Elegí al menos 2 mesas para unir'); return; }
+            socket.emit('mozo-une-mesas', { mesas: [...mesasSel] }, (res) => {
+                if (!res.ok) { alert(res.error || 'No se pudo unir'); return; }
+                mesasSel.clear();
+                renderModalMesas();
+            });
+        }
+
+        function separarGrupo(id) {
+            socket.emit('mozo-separa-mesas', { id }, (res) => {
+                if (!res.ok) { alert(res.error || 'No se pudo separar'); return; }
+                renderModalMesas();
+            });
+        }
 
         // Refresca el "hace X min" de las tarjetas sin re-renderizar
         setInterval(() => {

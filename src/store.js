@@ -18,6 +18,8 @@ let state = {
     mesas: [],
     menu: [],
     pedidos: [],
+    // Mesas físicas unidas en una "mesa larga" (grupo grande de gente)
+    gruposMesas: [],
     // Config por restaurante: estaciones.barra = categorías ruteadas a /barra
     config: { estaciones: { barra: [] } }
 };
@@ -137,6 +139,7 @@ function load() {
         state.mesas = Array.isArray(parsed.mesas) ? parsed.mesas : [];
         state.menu = Array.isArray(parsed.menu) ? parsed.menu : [];
         state.pedidos = (Array.isArray(parsed.pedidos) ? parsed.pedidos : []).map(migrarPartidas);
+        state.gruposMesas = Array.isArray(parsed.gruposMesas) ? parsed.gruposMesas : [];
         if (parsed.config && parsed.config.estaciones) {
             state.config.estaciones = { ...state.config.estaciones, ...parsed.config.estaciones };
         }
@@ -153,6 +156,7 @@ module.exports = {
     // --- Estructura ---
     getSucursales: () => [...state.sucursales],
     getMesaByCode: (code) => state.mesas.find(m => m.id === code),
+    getMesas: (sucursalId) => state.mesas.filter(m => !sucursalId || m.sucursalId === sucursalId),
     getSucursal: (id) => state.sucursales.find(s => s.id === id),
     getTenant: (id) => state.tenants.find(t => t.id === id),
     getMenu: (sucursalId) => state.menu.filter(i => i.sucursalId === sucursalId && i.disponible),
@@ -383,5 +387,35 @@ module.exports = {
     removeMesaSubscription(endpoint) {
         state.mesaSubscriptions = state.mesaSubscriptions.filter(s => s.endpoint !== endpoint);
         persist();
+    },
+
+    // --- Grupos de mesas: mesas físicas unidas en una "mesa larga" ---
+    // Solo agrupan la vista del mozo; cada QR/pedido sigue con su mesa.
+    getGruposMesas: (sucursalId) =>
+        state.gruposMesas.filter(g => !sucursalId || g.sucursalId === sucursalId),
+
+    getGrupoDeMesa: (mesaCode) =>
+        state.gruposMesas.find(g => g.mesas.includes(mesaCode)),
+
+    unirMesas(sucursalId, mesaCodes) {
+        const validas = new Set(state.mesas.filter(m => m.sucursalId === sucursalId).map(m => m.id));
+        const codes = [...new Set((mesaCodes || []).map(String))].filter(c => validas.has(c));
+        if (codes.length < 2) return null;
+        // Una mesa solo puede estar en un grupo: al unirla a otro se sale del anterior
+        state.gruposMesas = state.gruposMesas
+            .map(g => ({ ...g, mesas: g.mesas.filter(c => !codes.includes(c)) }))
+            .filter(g => g.mesas.length >= 2);
+        const grupo = { id: crypto.randomUUID(), sucursalId, mesas: codes.sort() };
+        state.gruposMesas.push(grupo);
+        persist();
+        return grupo;
+    },
+
+    separarGrupoMesas(id) {
+        const i = state.gruposMesas.findIndex(g => g.id === id);
+        if (i === -1) return null;
+        const [g] = state.gruposMesas.splice(i, 1);
+        persist();
+        return g;
     }
 };
