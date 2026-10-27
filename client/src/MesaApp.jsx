@@ -53,7 +53,14 @@ export default function MesaApp() {
     const [info, setInfo] = useState(null);
     const [error, setError] = useState(null);
     const [tab, setTab] = useState('home');
-    const [cart, setCart] = useState({});
+    // Carrito persistido por mesa: un refresh accidental no borra lo elegido
+    const [cart, setCart] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('cart:' + code) || '{}'); }
+        catch { return {}; }
+    });
+    useEffect(() => {
+        localStorage.setItem('cart:' + code, JSON.stringify(cart));
+    }, [cart, code]);
     const [pedidos, setPedidos] = useState([]);
     const [llamando, setLlamando] = useState(false);
     const [toast, setToast] = useState(null);
