@@ -89,6 +89,23 @@ const emitAck = (sock, ev, data) => new Promise(r => sock.emit(ev, data, r));
     console.assert(pt3.recibido === true && pt3.recibidoPor === 'auto', 'timeout debe autoconfirmar la recepción');
     console.log('autocierre por timeout OK');
 
+    // Pedido 4: cascada — el mozo entrega la comida lista y la bebida que
+    // quedó en cola se entrega junto (el mozo baja todo a la mesa de una vez)
+    const res4 = await emitAck(mesa, 'cliente-pedido', {
+        mesa: 'm5', cliente: 'Test4',
+        items: [{ id: 'm1', cantidad: 1 }, { id: 'b2', variante: 'v500', cantidad: 1 }]
+    });
+    await emitAck(mozo, 'mozo-pedido-confirmado', { id: res4.pedido.id });
+    await emitAck(mozo, 'cocina-pedido-preparando', { id: res4.pedido.id });
+    await emitAck(mozo, 'mozo-pedido-listo', { id: res4.pedido.id }); // cocina listo
+    const ent4 = await emitAck(mozo, 'mozo-partida-entregado', { id: res4.pedido.id, estacion: 'cocina' });
+    const mapa4 = Object.fromEntries(ent4.pedido.partidas.map(pt => [pt.estacion, pt.estado]));
+    console.log('cascada comida→bebida:', ent4.pedido.partidas.map(pt => `${pt.estacion}:${pt.estado}`).join(' '));
+    console.assert(mapa4.cocina === 'entregado' && mapa4.barra === 'entregado',
+        'entregar comida debe arrastrar la bebida pendiente');
+    // Y la dirección inversa no cascada (bebida adelantada no cierra la comida)
+    // ya quedó probado arriba: entrega de barra dejó cocina en preparando.
+
     mozo.close(); mesa.close();
     console.log('✅ flujo por estaciones OK');
     process.exit(0);

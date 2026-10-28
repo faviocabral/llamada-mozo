@@ -295,7 +295,21 @@ module.exports = {
             : pt && (PEDIDO_TRANSICIONES[pt.estado] || []).includes(estado);
         if (!pt || !ok) return null;
         pt.estado = estado;
-        if (estado === 'entregado') pt.entregadoEn = new Date().toISOString();
+        if (estado === 'entregado') {
+            pt.entregadoEn = new Date().toISOString();
+            // Cascada direccional: cuando el mozo entrega la comida, lleva
+            // también lo pendiente de las otras estaciones (la bebida va en
+            // la misma bajada). NO aplica al revés: entregar una bebida
+            // adelantada no debe cerrar la comida que sigue en cocina.
+            if (pt.estacion === 'cocina') {
+                for (const sib of p.partidas) {
+                    if (sib !== pt && ['confirmado', 'preparando', 'listo'].includes(sib.estado)) {
+                        sib.estado = 'entregado';
+                        sib.entregadoEn = pt.entregadoEn;
+                    }
+                }
+            }
+        }
         p.estado = estadoAgregado(p.partidas);
         if (PEDIDO_TERMINAL.includes(p.estado)) p.entregadoHora = new Date().toISOString();
         persist();
