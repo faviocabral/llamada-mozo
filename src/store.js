@@ -350,6 +350,10 @@ module.exports = {
 
     addSubscription(sub) {
         state.subscriptions = state.subscriptions.filter(s => s.endpoint !== sub.endpoint);
+        // Igual que con las de mesa: acotar los fantasmas de mozo
+        if (state.subscriptions.length >= 15) {
+            state.subscriptions = state.subscriptions.slice(-14);
+        }
         state.subscriptions.push({
             endpoint: sub.endpoint,
             keys: sub.keys,
@@ -373,6 +377,15 @@ module.exports = {
         // Un endpoint solo puede estar ligado a una mesa a la vez (p.ej. si el
         // mismo celular escanea otro QR, la última suscripción gana)
         state.mesaSubscriptions = state.mesaSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+        // Cota por mesa: si el cliente borra datos del browser, sus subs
+        // viejas quedan "fantasma" (FCM las sigue entregando pero el teléfono
+        // no puede desencriptar). Acotamos para que los fantasmas mueran.
+        const MAX_POR_MESA = 6;
+        const deLaMesa = state.mesaSubscriptions.filter(s => s.mesaCode === mesaCode);
+        if (deLaMesa.length >= MAX_POR_MESA) {
+            const aBorrar = new Set(deLaMesa.slice(0, deLaMesa.length - MAX_POR_MESA + 1).map(s => s.endpoint));
+            state.mesaSubscriptions = state.mesaSubscriptions.filter(s => !aBorrar.has(s.endpoint));
+        }
         state.mesaSubscriptions.push({
             endpoint: sub.endpoint,
             keys: sub.keys,
