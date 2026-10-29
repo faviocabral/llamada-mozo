@@ -275,6 +275,19 @@ button.home-push:active { transform: scale(.96); }
 }
 .sheet-listo:active { transform: scale(.98); }
 
+/* ---------- Lottie: éxito de envío + señal de llamado ---------- */
+.lottie-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,.96);
+    z-index: 60; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    animation: overlayIn .18s ease-out;
+}
+@keyframes overlayIn { from { opacity: 0; } }
+.lottie-overlay-txt {
+    font-size: 17px; font-weight: 800; color: var(--teal-dark);
+}
+.fab-signal { display: inline-flex; vertical-align: middle; margin-right: 4px; }
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;

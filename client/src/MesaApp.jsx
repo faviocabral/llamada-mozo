@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import TabBar from './components/TabBar.jsx';
 import Toast from './components/Toast.jsx';
+import Lottie from './components/Lottie.jsx';
 import Home from './pages/Home.jsx';
 import MenuPage from './pages/MenuPage.jsx';
 import PedidoPage from './pages/PedidoPage.jsx';
@@ -62,6 +63,7 @@ export default function MesaApp() {
         localStorage.setItem('cart:' + code, JSON.stringify(cart));
     }, [cart, code]);
     const [pedidos, setPedidos] = useState([]);
+    const [enviado, setEnviado] = useState(false); // overlay de éxito post-envío
     const [llamando, setLlamando] = useState(false);
     const [toast, setToast] = useState(null);
     const [pushEstado, setPushEstado] = useState(() =>
@@ -315,8 +317,11 @@ export default function MesaApp() {
         }, (res) => {
             if (res && res.ok) {
                 setCart({});
-                setTab('estado');
-                avisar('🍽️ ¡Pedido enviado a cocina!', 'ok');
+                // Check animado un instante antes de saltar a Estado:
+                // confirma visualmente que el pedido salió, sin que el
+                // cliente se pregunte si el toque registró algo
+                setEnviado(true);
+                setTimeout(() => { setEnviado(false); setTab('estado'); }, 1500);
             } else {
                 avisar('❌ ' + ((res && res.error) || 'No se pudo enviar'), 'err');
             }
@@ -382,8 +387,18 @@ export default function MesaApp() {
                     onClick={toggleLlamado}
                     title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
                 >
-                    {llamando ? '✕ Cancelar' : '🔔 Mozo'}
+                    {llamando
+                        ? <><Lottie src="/lottie/signal.json" loop size={22} className="fab-signal" /> Cancelar</>
+                        : '🔔 Mozo'}
                 </button>
+            )}
+
+            {/* Éxito del envío: check animado a pantalla completa */}
+            {enviado && (
+                <div className="lottie-overlay">
+                    <Lottie src="/lottie/success.json" size={170} />
+                    <div className="lottie-overlay-txt">¡Pedido enviado a cocina!</div>
+                </div>
             )}
 
             <TabBar tab={tab} setTab={setTab} pedidoCount={cartCount}
