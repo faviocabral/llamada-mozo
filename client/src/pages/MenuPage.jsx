@@ -79,14 +79,18 @@ export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando
                 </div>
             </div>
             <div className="page-inner">
+                {/* key por categoría: al filtrar remonta la lista y cada
+                    fila entra con pop escalonado (ver .menu-filtrado) */}
+                <div className="menu-filtrado" key={catSel || 'todas'}>
                 {visibles.map(cat => (
                     <div key={cat}>
                         <div className="cat-title">{iconoCat(cat)} {cat}</div>
-                        {porCat[cat].map(item => {
+                        {porCat[cat].map((item, i) => {
                             const conVariantes = item.variantes && item.variantes.length > 0;
                             const qty = qtyItem(item);
                             return (
-                                <div className={'item-row' + (qty ? ' sel' : '')} key={item.id}>
+                                <div className={'item-row' + (qty ? ' sel' : '')} key={item.id}
+                                    style={{ animationDelay: (i * 0.04) + 's' }}>
                                     <div className="item-info">
                                         <div className="item-name">{item.nombre}</div>
                                         <div className="item-desc">{item.descripcion}</div>
@@ -116,6 +120,7 @@ export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando
                         })}
                     </div>
                 ))}
+                </div>
                 {count > 0 && <div className="cart-spacer" />}
             </div>
             {count > 0 && (

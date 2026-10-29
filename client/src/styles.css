@@ -27,6 +27,12 @@ body {
 .page { min-height: 100vh; padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
 .page-inner { max-width: 640px; margin: 0 auto; }
 
+/* Pop escalonado al filtrar categorías: cada fila entra con delay */
+.menu-filtrado .item-row {
+    animation: itemPop .35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes itemPop { from { transform: scale(.9); opacity: 0; } }
+
 /* ---------- Home (pantalla 1 del mock) ---------- */
 .home {
     background: var(--teal);
@@ -424,8 +430,18 @@ button.partida-chip.confirmar {
     opacity: .45;
     transition: all .3s;
 }
-.step.done .step-ico { background: var(--teal); color: #fff; filter: none; opacity: 1; }
-.step.current .step-ico { box-shadow: 0 0 0 3px #b2ebf7; transform: scale(1.1); }
+.step.done .step-ico {
+    background: var(--teal); color: #fff; filter: none; opacity: 1;
+    /* pop elástico al completarse el paso */
+    animation: stepPop .4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes stepPop { from { transform: scale(.4); } }
+.step.current .step-ico {
+    box-shadow: 0 0 0 3px #b2ebf7;
+    /* latido continuo: el paso activo respira */
+    animation: stepLatido 1.6s ease-in-out infinite;
+}
+@keyframes stepLatido { 0%,100% { transform: scale(1.1); } 50% { transform: scale(1.22); } }
 .step-label { font-size: 9px; color: #bbb; margin-top: 4px; text-align: center; line-height: 1.15; }
 .step.done .step-label { color: var(--teal-dark); font-weight: 700; }
 .step-line { flex: 1; height: 3px; background: #eee; border-radius: 2px; margin-top: 14px; transition: background .3s; }
