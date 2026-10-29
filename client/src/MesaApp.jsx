@@ -150,6 +150,11 @@ export default function MesaApp() {
             .then(setInfo)
             .catch(() => setError('Este código QR no corresponde a una mesa válida.'));
 
+        // Precalienta el chunk de lottie-web en background: cuando el
+        // overlay de éxito o la señal del mozo lo necesitan, ya está en caché
+        // y dibuja al instante (sin esperar 300KB de descarga).
+        import('lottie-web').catch(() => {});
+
         // Socket: sala de la mesa + eventos en vivo
         const socket = io();
         socketRef.current = socket;
