@@ -63,9 +63,12 @@ function FilaPartida({ pt, primera, onConfirma, onAdelanta }) {
                         ? <span className="partida-chip done">Recibida ✓✓</span>
                         : <button className="partida-chip confirmar"
                             onClick={() => onConfirma(pt)}>¿Ya la recibiste? Tocá ✓</button>
-                ) : pt.estacion !== 'cocina' && (
-                    <span className={'partida-chip' + (pt.urgente ? ' urgente' : '')}>
-                        {pt.urgente ? '🔥 Pedida ya' : (ESTADO_COMPACTO[pt.estado] || pt.estado)}
+                ) : pt.estacion !== 'cocina' &&
+                    // Chip solo cuando hay algo que reportar: urgente o ya en
+                    // marcha. "Pendiente"/"En cola" no dice nada al cliente.
+                    (pt.urgente || !['nuevo', 'confirmado'].includes(pt.estado)) && (
+                    <span className={'partida-chip' + (pt.urgente && pt.estado !== 'listo' ? ' urgente' : '')}>
+                        {pt.urgente && pt.estado !== 'listo' ? '🔥 Pedida ya' : (ESTADO_COMPACTO[pt.estado] || pt.estado)}
                     </span>
                 )}
             </div>
