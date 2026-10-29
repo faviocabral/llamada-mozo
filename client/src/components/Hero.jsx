@@ -20,8 +20,8 @@ export default function Hero() {
             <rect x="30" y="106" width="140" height="9" rx="4.5" fill="#0f8f84" />
             <circle className="hero-fork" cx="52" cy="26" r="11" fill="#ffd166" />
             <text x="52" y="31" fontSize="12" textAnchor="middle" fill="#b27300">🍴</text>
-            <rect className="hero-check" x="128" y="14" width="28" height="28" rx="7" fill="#ff6b9d" transform="rotate(14 142 28)" />
-            <text x="142" y="34" fontSize="15" textAnchor="middle" fill="#fff">✓</text>
+            <rect className="hero-check" x="128" y="22" width="28" height="28" rx="7" fill="#ff6b9d" transform="rotate(14 142 36)" />
+            <text x="142" y="42" fontSize="15" textAnchor="middle" fill="#fff">✓</text>
             <circle className="hero-dot d1" cx="160" cy="60" r="6" fill="#ffffff" opacity=".8" />
             <circle className="hero-dot d2" cx="36" cy="66" r="5" fill="#ffffff" opacity=".7" />
         </svg>
