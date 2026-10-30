@@ -7,6 +7,13 @@
 }
 
 * { box-sizing: border-box; }
+html, body {
+    /* Nada de scroll horizontal (el overshoot del pop sobrepasa el
+       viewport un instante) ni rebote de goma al llegar al borde —
+       eso descuadraba las páginas en móvil */
+    overflow-x: hidden;
+    overscroll-behavior: none;
+}
 body {
     margin: 0;
     font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
