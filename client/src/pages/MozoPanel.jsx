@@ -29,6 +29,7 @@ export default function MozoPanel({ mozoKey }) {
     const [mozo, setMozo] = useState(null); // {id, nombre, mesas} — identidad + zona
     const [mesasPanel, setMesasPanel] = useState([]);
     const [verTodas, setVerTodas] = useState(false); // salir de mi zona
+    const [zonaOpen, setZonaOpen] = useState(false); // modal "Mi zona"
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -106,24 +107,16 @@ export default function MozoPanel({ mozoKey }) {
                 <small>llamados y pedidos en vivo</small>
             </div>
 
-            {/* Zona del mozo: elegir qué mesas cubre */}
+            {/* Zona del mozo: chip resumen que abre el modal de selección */}
             {mesasPanel.length > 0 && mozo && (
-                <details className="panel-zona">
-                    <summary>
-                        🗺️ Mi zona: {mozo.mesas && mozo.mesas.length
-                            ? mozo.mesas.map(c => `Mesa ${(mesasPanel.find(m => m.id === c) || {}).numero || c}`).join(', ')
-                            : 'todas las mesas'}
-                    </summary>
-                    <div className="panel-filtros">
-                        {mesasPanel.map(m => (
-                            <button key={m.id}
-                                className={'chip' + ((mozo.mesas || []).includes(m.id) ? ' active' : '')}
-                                onClick={() => toggleZona(m.id)}>
-                                Mesa {m.numero}
-                            </button>
-                        ))}
-                    </div>
-                </details>
+                <div className="panel-filtros">
+                    <button className="chip zona-chip" onClick={() => setZonaOpen(true)}>
+                        🗺️ {mozo.mesas && mozo.mesas.length
+                            ? 'Zona: ' + mozo.mesas.map(c =>
+                                'Mesa ' + ((mesasPanel.find(m => m.id === c) || {}).numero || c)).join(', ')
+                            : 'Zona: todas las mesas'}
+                    </button>
+                </div>
             )}
             {/* Con zona activa: toggle para ver el salón completo */}
             {mozo && mozo.mesas && mozo.mesas.length > 0 && (
@@ -292,6 +285,35 @@ export default function MozoPanel({ mozoKey }) {
                     </details>
                 )}
             </div>
+
+            {/* Modal "Mi zona": sheet con chips de mesas, como el de variantes */}
+            {zonaOpen && mozo && (
+                <div className="sheet-overlay" onClick={() => setZonaOpen(false)}>
+                    <div className="sheet" onClick={e => e.stopPropagation()}>
+                        <div className="sheet-head">
+                            <div>
+                                <div className="sheet-title">🗺️ Mi zona</div>
+                                <div className="sheet-desc">
+                                    Marcá las mesas que cubrís este turno — filtra tu panel y tus avisos. Sin marca = todas.
+                                </div>
+                            </div>
+                            <button className="sheet-cerrar" onClick={() => setZonaOpen(false)}>✕</button>
+                        </div>
+                        <div className="zona-grid">
+                            {mesasPanel.map(m => (
+                                <button key={m.id}
+                                    className={'mozo-mesa' + ((mozo.mesas || []).includes(m.id) ? ' ocupada' : '')}
+                                    onClick={() => toggleZona(m.id)}>
+                                    Mesa {m.numero}
+                                </button>
+                            ))}
+                        </div>
+                        <button className="sheet-listo" onClick={() => setZonaOpen(false)}>
+                            Listo{mozo.mesas && mozo.mesas.length ? ` · ${mozo.mesas.length} mesas` : ' · todas'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

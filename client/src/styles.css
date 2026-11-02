@@ -424,12 +424,12 @@ button.home-push:active { transform: scale(.96); }
 }
 .chip-asignado.mio { background: var(--teal); color: #fff; }
 .panel-zona { padding: 0 14px; }
-.panel-zona summary {
-    cursor: pointer; font-size: 13px; font-weight: 700; color: var(--teal-dark);
-    padding: 8px 0 2px; list-style: none;
+.zona-chip { font-size: 12px; }
+.zona-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px; margin: 6px 0 12px;
 }
-.panel-zona summary::before { content: '▸ '; }
-.panel-zona[open] summary::before { content: '▾ '; }
+.zona-grid .mozo-mesa { padding: 16px 8px; font-size: 15px; }
 
 /* ---------- Toast ---------- */
 .toast {
