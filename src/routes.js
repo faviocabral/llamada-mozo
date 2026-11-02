@@ -7,10 +7,13 @@ const store = require('./store');
 const router = express.Router();
 const CLIENT_DIST = path.join(__dirname, '..', 'client', 'dist');
 
-// Requiere Authorization: Bearer <MOZO_KEY>  (o ?key= para probar desde el browser)
+// Requiere Authorization: Bearer <clave de mozo>  (o ?key=)
+// Acepta la clave única y las individuales de MOZOS_JSON.
 function requireMozo(req, res, next) {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '') || req.query.key;
-    if (token !== mozoKey) return res.status(401).json({ error: 'No autorizado' });
+    if (token !== mozoKey && !store.getMozoByKey(token)) {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
     next();
 }
 

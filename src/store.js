@@ -149,8 +149,14 @@ function load() {
     } catch {
         // data.json inexistente o corrupto: arranca limpio
     }
-    // Mozos: si no hay persistidos, se seedea desde config (MOZOS_JSON o clave única)
-    if (!state.mozos.length) state.mozos = mozosCfg.map(m => ({ mesas: [], ...m }));
+    // Mozos: merge por id — config (MOZOS_JSON) agrega/actualiza nombre y
+    // clave; la zona elegida en el panel queda persistida en data.json
+    const porId = new Map(state.mozos.map(m => [m.id, m]));
+    for (const cfg of mozosCfg) {
+        const prev = porId.get(cfg.id) || { mesas: [] };
+        porId.set(cfg.id, { ...prev, id: cfg.id, nombre: cfg.nombre, key: cfg.key });
+    }
+    state.mozos = [...porId.values()];
     seed();
     prune();
 }
