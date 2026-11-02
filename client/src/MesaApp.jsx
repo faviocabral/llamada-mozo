@@ -39,8 +39,10 @@ const mismaKey = (a, b) => {
 const firmaPedido = (p) =>
     p.estado + '|' + (p.partidas || []).map(pt => pt.estacion + ':' + pt.estado).join(',');
 
-export default function MesaApp() {
-    const { code } = useParams();
+export default function MesaApp({ codeProp, esMozo, onCambiarMesa }) {
+    const { code: codeParam } = useParams();
+    // codeProp: la mesa elegida en modo mozo; si no, el QR de la URL
+    const code = codeProp || codeParam;
     // Identidad por dispositivo: los avisos de pedido llegan solo a quien ordenó
     const [clienteId] = useState(() => {
         let id = localStorage.getItem('mesaClienteId');
@@ -363,23 +365,24 @@ export default function MesaApp() {
             {tab === 'home' && (
                 <Home info={info} pushEstado={pushEstado}
                     onActivarPush={activarPush} iosSinInstalar={iosSinInstalar}
-                    installEvt={installEvt} onInstalar={instalarApp} />
+                    installEvt={installEvt} onInstalar={instalarApp}
+                    esMozo={esMozo} onCambiarMesa={onCambiarMesa} />
             )}
             {tab === 'menu' && (
                 <MenuPage info={info} cart={cart} sumar={sumar} restar={restar}
                     goPedido={() => setTab('pedido')}
-                    llamando={llamando} onToggleLlamado={toggleLlamado} />
+                    llamando={llamando} onToggleLlamado={toggleLlamado} esMozo={esMozo} />
             )}
             {tab === 'pedido' && (
                 <PedidoPage info={info} cart={cart} sumar={sumar} restar={restar}
                     enviarPedido={enviarPedido}
-                    llamando={llamando} onToggleLlamado={toggleLlamado} />
+                    llamando={llamando} onToggleLlamado={toggleLlamado} esMozo={esMozo} />
             )}
             {tab === 'estado' && (
                 <EstadoPage info={info} pedidos={pedidos} clienteId={clienteId}
                     pushEstado={pushEstado} onActivarPush={activarPush}
                     iosSinInstalar={iosSinInstalar}
-                    llamando={llamando} onToggleLlamado={toggleLlamado}
+                    llamando={llamando} onToggleLlamado={toggleLlamado} esMozo={esMozo}
                     onAgregarMas={() => setTab('menu')}
                     onAdelantaPartida={adelantarPartida}
                     onConfirmaEntrega={confirmarEntrega} />
@@ -387,7 +390,7 @@ export default function MesaApp() {
 
             {/* En las tabs con topbar la campana va dentro de la barra;
                 en Inicio queda como FAB flotante */}
-            {tab === 'home' && (
+            {tab === 'home' && !esMozo && (
                 <button
                     className={'fab' + (llamando ? ' pendiente' : '')}
                     onClick={toggleLlamado}

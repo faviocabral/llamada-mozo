@@ -320,6 +320,18 @@ button.home-push:active { transform: scale(.96); }
 .hero-dot.d2 { animation-delay: 1.6s; }
 @keyframes dotDeriva { 50% { transform: translateY(-5px); opacity: .5; } }
 
+/* ---------- Modo mozo: selector de mesa ---------- */
+.mozo-mesas {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px; padding-top: 16px;
+}
+.mozo-mesa {
+    padding: 22px 10px; font-size: 17px; font-weight: 800; color: var(--teal-dark);
+    background: #fff; border: 2px solid var(--teal); border-radius: 16px;
+    cursor: pointer; transition: transform .12s;
+}
+.mozo-mesa:active { transform: scale(.96); background: #e8faf8; }
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;

@@ -27,7 +27,7 @@ const iconoCat = (cat) => (ICONOS_CAT.find(([re]) => re.test(cat)) || [null, '�
 // Pantalla 2 del mock: lista por categorías con stepper a la derecha
 // y barra de acción fija arriba del tab bar.
 // Carrusel de chips arriba para filtrar por categoría.
-export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando, onToggleLlamado }) {
+export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando, onToggleLlamado, esMozo }) {
     const [catSel, setCatSel] = useState(null); // null = todas
     const [sheetItem, setSheetItem] = useState(null); // ítem con variantes abierto
 
@@ -58,11 +58,13 @@ export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando
                 <div className="topbar">
                     Menú
                     <small>{info.sucursal && info.sucursal.nombre} · Mesa {info.mesa.numero}</small>
-                    <button
-                        className={'bell-top' + (llamando ? ' pendiente' : '')}
-                        onClick={onToggleLlamado}
-                        title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
-                    >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                    {!esMozo && (
+                        <button
+                            className={'bell-top' + (llamando ? ' pendiente' : '')}
+                            onClick={onToggleLlamado}
+                            title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
+                        >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                    )}
                 </div>
                 <div className="cat-carousel">
                     <button

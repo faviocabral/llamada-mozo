@@ -50,6 +50,45 @@ router.get('/m/:code', (req, res) => {
     res.type('html').send(html);
 });
 
+// --- Modo mozo (React): tomar pedidos a nombre de una mesa ---
+// El mozo entra con ?key= (la misma del panel /mozo), elige mesa y usa
+// la misma app del cliente. Manifest propio para instalarla como app.
+router.get('/manifest-mozo.json', (req, res) => {
+    res.json({
+        name: 'Tomar pedido — Mozo',
+        short_name: 'Mozo Pedidos',
+        start_url: '/mozo-app',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#2ec4b6',
+        theme_color: '#2ec4b6',
+        icons: [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+    });
+});
+
+router.get('/mozo-app', (req, res) => {
+    const index = path.join(CLIENT_DIST, 'index.html');
+    if (!fs.existsSync(index)) {
+        return res.status(503).send('La app del cliente no está compilada. Corré: npm run build');
+    }
+    const html = fs.readFileSync(index, 'utf8')
+        .replace('__MANIFEST_URL__', '/manifest-mozo.json');
+    res.type('html').send(html);
+});
+
+// Mesas visibles para el selector del modo mozo (misma clave que el panel)
+router.get('/api/mozos/mesas', requireMozo, (req, res) => {
+    const todas = store.getMesas();
+    const sucursal = store.getSucursal(todas[0] && todas[0].sucursalId);
+    res.json({
+        mesas: todas.map(m => ({ code: m.id, numero: m.numero })),
+        sucursal: sucursal ? sucursal.nombre : ''
+    });
+});
+
 // --- Info pública de la mesa para la app (nombre del local, nro, menú) ---
 router.get('/api/mesa/:code', (req, res) => {
     const mesa = store.getMesaByCode(req.params.code);

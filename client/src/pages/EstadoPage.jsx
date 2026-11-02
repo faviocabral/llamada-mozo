@@ -99,17 +99,19 @@ function ItemsPartida({ items }) {
 
 // Tab Estado: seguimiento en vivo de los pedidos ya hechos por la mesa
 // + activación del aviso push "pedido listo".
-export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, onAgregarMas, onAdelantaPartida, onConfirmaEntrega }) {
+export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onActivarPush, iosSinInstalar, llamando, onToggleLlamado, esMozo, onAgregarMas, onAdelantaPartida, onConfirmaEntrega }) {
     return (
         <div className="page">
             <div className="topbar">
                 Pedidos de la mesa
                 <small>Mesa {info.mesa.numero} · se actualizan en vivo</small>
-                <button
-                    className={'bell-top' + (llamando ? ' pendiente' : '')}
-                    onClick={onToggleLlamado}
-                    title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
-                >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                {!esMozo && (
+                    <button
+                        className={'bell-top' + (llamando ? ' pendiente' : '')}
+                        onClick={onToggleLlamado}
+                        title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
+                    >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                )}
             </div>
             <div className="page-inner">
                 {pedidos.length === 0 && (

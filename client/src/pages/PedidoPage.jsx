@@ -5,7 +5,7 @@ const CAT_BEBIDA = /bebida|drink|refresco|gaseosa|cerveza|trago|jugo|agua|caf[e�
 
 // Tab Pedido: carrito editable + envío. El seguimiento de pedidos ya hechos
 // vive en la pestaña Estado.
-export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, llamando, onToggleLlamado }) {
+export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, llamando, onToggleLlamado, esMozo }) {
     const [cliente, setCliente] = useState(localStorage.getItem('mesaCliente') || '');
     const [nota, setNota] = useState('');
     const [adelantar, setAdelantar] = useState(false);
@@ -34,11 +34,13 @@ export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, ll
             <div className="topbar">
                 Tu pedido
                 <small>Mesa {info.mesa.numero}</small>
-                <button
-                    className={'bell-top' + (llamando ? ' pendiente' : '')}
-                    onClick={onToggleLlamado}
-                    title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
-                >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                {!esMozo && (
+                    <button
+                        className={'bell-top' + (llamando ? ' pendiente' : '')}
+                        onClick={onToggleLlamado}
+                        title={llamando ? 'Cancelar llamado' : 'Llamar al mozo'}
+                    >{llamando ? '✕ Cancelar' : '🔔 Mozo'}</button>
+                )}
             </div>
             <div className="page-inner">
                 {count === 0 && (
