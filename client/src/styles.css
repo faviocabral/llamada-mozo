@@ -372,6 +372,51 @@ button.home-push:active { transform: scale(.96); }
 .panel-btn:active { transform: scale(.96); }
 .pedido-card.panel-nuevo { border-left: 4px solid var(--orange); }
 
+/* Filtros del panel: chips con conteo (reusan .chip del menú) */
+.panel-filtros {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 10px 14px 4px; scrollbar-width: none;
+}
+.panel-filtros.mesas { padding-top: 4px; }
+.panel-filtros .chip { flex-shrink: 0; }
+.panel-filtros .chip b { margin-left: 3px; opacity: .8; }
+
+/* Total a cobrar por mesa */
+.panel-totales {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    background: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px;
+    font-size: 13px;
+}
+.panel-total-mesa {
+    background: var(--teal); color: #fff; border-radius: 8px;
+    padding: 4px 10px; font-weight: 700;
+}
+
+/* Footer de la card: total + acciones */
+.panel-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f2;
+    flex-wrap: wrap; gap: 6px;
+}
+.panel-btn.entregar {
+    background: var(--orange); color: #fff;
+    animation: bellSwing 1.4s ease-in-out infinite;
+    transform-origin: 50% 0;
+}
+@keyframes bellSwing { 0%,100% { transform: rotate(0); } 20% { transform: rotate(8deg); } 40% { transform: rotate(-6deg); } 60% { transform: rotate(4deg); } 80% { transform: rotate(-2deg); } }
+/* Card con algo listo para retirar: borde naranja */
+.pedido-card.panel-retirar { border-left: 4px solid var(--orange); }
+
+/* Entregados recientes: sección colapsable, visualmente apagada */
+.panel-entregados { margin-top: 14px; }
+.panel-entregados summary {
+    cursor: pointer; font-weight: 700; font-size: 13px; color: #888;
+    padding: 8px 2px; list-style: none;
+}
+.panel-entregados summary::before { content: '▸ '; }
+.panel-entregados[open] summary::before { content: '▾ '; }
+.pedido-card.panel-entregado { opacity: .65; box-shadow: none; border: 1px solid #eee; }
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;
