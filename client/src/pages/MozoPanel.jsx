@@ -107,24 +107,20 @@ export default function MozoPanel({ mozoKey }) {
                 <small>llamados y pedidos en vivo</small>
             </div>
 
-            {/* Zona del mozo: chip resumen que abre el modal de selección */}
+            {/* Zona del mozo: chip compacto que abre el modal; al lado
+                el toggle para ver el salón completo cuando hay zona */}
             {mesasPanel.length > 0 && mozo && (
                 <div className="panel-filtros">
-                    <button className="chip zona-chip" onClick={() => setZonaOpen(true)}>
-                        🗺️ {mozo.mesas && mozo.mesas.length
-                            ? 'Zona: ' + mozo.mesas.map(c =>
-                                'Mesa ' + ((mesasPanel.find(m => m.id === c) || {}).numero || c)).join(', ')
-                            : 'Zona: todas las mesas'}
+                    <button className={'chip zona-chip' + ((mozo.mesas || []).length ? ' active' : '')}
+                        onClick={() => setZonaOpen(true)}>
+                        🗺️ Zona{(mozo.mesas || []).length ? ` · ${mozo.mesas.length}` : ''}
                     </button>
-                </div>
-            )}
-            {/* Con zona activa: toggle para ver el salón completo */}
-            {mozo && mozo.mesas && mozo.mesas.length > 0 && (
-                <div className="panel-filtros">
-                    <button className={'chip' + (verTodas ? ' active' : '')}
-                        onClick={() => setVerTodas(!verTodas)}>
-                        {verTodas ? '🌐 Viendo todas' : '🌐 Ver todas las mesas'}
-                    </button>
+                    {(mozo.mesas || []).length > 0 && (
+                        <button className={'chip' + (verTodas ? ' active' : '')}
+                            onClick={() => setVerTodas(!verTodas)}>
+                            {verTodas ? '🌐 Todas ✓' : '🌐 Ver todas'}
+                        </button>
+                    )}
                 </div>
             )}
 
