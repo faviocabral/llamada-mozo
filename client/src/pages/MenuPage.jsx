@@ -56,8 +56,8 @@ export default function MenuPage({ info, cart, sumar, restar, goPedido, llamando
         <div className="page">
             <div className="menu-head">
                 <div className="topbar">
-                    Menú
-                    <small>{info.sucursal && info.sucursal.nombre} · Mesa {info.mesa.numero}</small>
+                    {esMozo ? `Mesa ${info.mesa.numero}` : 'Menú'}
+                    <small>{esMozo ? 'Menú' : `${info.sucursal && info.sucursal.nombre} · Mesa ${info.mesa.numero}`}</small>
                     {!esMozo && (
                         <button
                             className={'bell-top' + (llamando ? ' pendiente' : '')}

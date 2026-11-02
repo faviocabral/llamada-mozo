@@ -15,11 +15,12 @@ export default function MozoApp() {
     const [mesaSel, setMesaSel] = useState(null);
 
     useEffect(() => {
+        if (mesaSel) return; // al volver al selector refresca los activos
         fetch('/api/mozos/mesas?key=' + encodeURIComponent(key))
             .then(r => { if (!r.ok) throw new Error('bad'); return r.json(); })
             .then(setData)
             .catch(() => setError('Clave inválida o sin conexión.'));
-    }, [key]);
+    }, [key, mesaSel]);
 
     // Mesa elegida: la app del cliente en modo mozo (sin campana/push)
     if (mesaSel) {
@@ -38,8 +39,15 @@ export default function MozoApp() {
             </div>
             <div className="page-inner mozo-mesas">
                 {data.mesas.map(m => (
-                    <button key={m.code} className="mozo-mesa" onClick={() => setMesaSel(m)}>
+                    <button key={m.code}
+                        className={'mozo-mesa' + (m.activos ? ' ocupada' : '')}
+                        onClick={() => setMesaSel(m)}>
                         Mesa {m.numero}
+                        {m.activos > 0 && (
+                            <span className="mesa-activos">
+                                {m.activos} pedido{m.activos > 1 ? 's' : ''} activo{m.activos > 1 ? 's' : ''}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>

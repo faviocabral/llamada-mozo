@@ -103,8 +103,8 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
     return (
         <div className="page">
             <div className="topbar">
-                Pedidos de la mesa
-                <small>Mesa {info.mesa.numero} · se actualizan en vivo</small>
+                {esMozo ? `Mesa ${info.mesa.numero} · Pedidos` : 'Pedidos de la mesa'}
+                <small>{esMozo ? 'se actualizan en vivo' : `Mesa ${info.mesa.numero} · se actualizan en vivo`}</small>
                 {!esMozo && (
                     <button
                         className={'bell-top' + (llamando ? ' pendiente' : '')}
@@ -128,8 +128,10 @@ export default function EstadoPage({ info, pedidos, clienteId, pushEstado, onAct
                         ) : (
                             <>
                                 <div className="pedido-cliente">
-                                    {p.cliente || 'Pedido'}
-                                    {p.clienteId && p.clienteId === clienteId &&
+                                    {esMozo
+                                        ? `Mesa ${info.mesa.numero} · ${p.cliente || 'Pedido'}`
+                                        : (p.cliente || 'Pedido')}
+                                    {!esMozo && p.clienteId && p.clienteId === clienteId &&
                                         <span className="chip-mio">Tu pedido</span>}
                                 </div>
                                 {(!(p.partidas || []).length || p.partidas.some(pt => pt.estacion === 'cocina')) &&

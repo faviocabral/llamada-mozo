@@ -32,8 +32,8 @@ export default function PedidoPage({ info, cart, sumar, restar, enviarPedido, ll
     return (
         <div className="page">
             <div className="topbar">
-                Tu pedido
-                <small>Mesa {info.mesa.numero}</small>
+                {esMozo ? `Mesa ${info.mesa.numero}` : 'Tu pedido'}
+                <small>{esMozo ? 'Pedido de la mesa' : `Mesa ${info.mesa.numero}`}</small>
                 {!esMozo && (
                     <button
                         className={'bell-top' + (llamando ? ' pendiente' : '')}

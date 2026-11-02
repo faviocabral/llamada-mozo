@@ -79,12 +79,18 @@ router.get('/mozo-app', (req, res) => {
     res.type('html').send(html);
 });
 
-// Mesas visibles para el selector del modo mozo (misma clave que el panel)
+// Mesas visibles para el selector del modo mozo (misma clave que el
+// panel). Cada mesa trae cuántos pedidos activos tiene — la grilla
+// los pinta de otro color para que el mozo sepa dónde mirar.
 router.get('/api/mozos/mesas', requireMozo, (req, res) => {
     const todas = store.getMesas();
-    const sucursal = store.getSucursal(todas[0] && todas[0].sucursalId);
+    const sucId = todas[0] && todas[0].sucursalId;
+    const sucursal = store.getSucursal(sucId);
+    const porMesa = {};
+    store.getPedidosActivos(sucId)
+        .forEach(p => { porMesa[p.mesaCode] = (porMesa[p.mesaCode] || 0) + 1; });
     res.json({
-        mesas: todas.map(m => ({ code: m.id, numero: m.numero })),
+        mesas: todas.map(m => ({ code: m.id, numero: m.numero, activos: porMesa[m.id] || 0 })),
         sucursal: sucursal ? sucursal.nombre : ''
     });
 });
