@@ -417,6 +417,20 @@ button.home-push:active { transform: scale(.96); }
 .panel-entregados[open] summary::before { content: '▾ '; }
 .pedido-card.panel-entregado { opacity: .65; box-shadow: none; border: 1px solid #eee; }
 
+/* Claim: quién atiende el pedido */
+.chip-asignado {
+    background: #eee; color: #666; border-radius: 8px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700; margin-right: 6px;
+}
+.chip-asignado.mio { background: var(--teal); color: #fff; }
+.panel-zona { padding: 0 14px; }
+.panel-zona summary {
+    cursor: pointer; font-size: 13px; font-weight: 700; color: var(--teal-dark);
+    padding: 8px 0 2px; list-style: none;
+}
+.panel-zona summary::before { content: '▸ '; }
+.panel-zona[open] summary::before { content: '▾ '; }
+
 /* ---------- Toast ---------- */
 .toast {
     position: fixed;

@@ -47,8 +47,20 @@ function enviar(payload, subs, onExpirada) {
     }
 }
 
-const aMozos = (payload) =>
-    enviar(payload, store.getSubscriptions(), e => store.removeSubscription(e));
+// Push a mozos: con mesaCode se filtra por ZONA — solo llega a mozos
+// que cubren esa mesa (mozoId con zona propia). Subs sin mozoId (panel
+// clásico, builds viejos) reciben todo. Zona vacía = cubre todas.
+const aMozos = (payload, mesaCode) => {
+    let subs = store.getSubscriptions();
+    if (mesaCode) {
+        subs = subs.filter(s => {
+            if (!s.mozoId) return true;
+            const m = store.getMozo(s.mozoId);
+            return !m || !m.mesas || !m.mesas.length || m.mesas.includes(mesaCode);
+        });
+    }
+    enviar(payload, subs, e => store.removeSubscription(e));
+};
 
 const aMesa = (payload, mesaCode) =>
     enviar(payload, store.getMesaSubscriptions(mesaCode), e => store.removeMesaSubscription(e));
@@ -78,7 +90,7 @@ function notificarLlamado(call) {
         tag: `llamado-mesa-${call.mesa}`,
         url: '/mozo',
         call
-    });
+    }, call.mesa);
 }
 
 function notificarPedido(pedido) {
@@ -89,7 +101,7 @@ function notificarPedido(pedido) {
         tag: `pedido-${pedido.id}`,
         url: '/mozo',
         pedido
-    });
+    }, pedido.mesaCode);
 }
 
 // ---------- Avisos al CLIENTE de la mesa (seguimiento del pedido) ----------
@@ -159,7 +171,7 @@ function notificarPartidaUrgente(pedido, partida) {
         body: `El cliente pide ${t.nombre} YA, antes que la comida.`,
         tag: `urgente-${partida.id}`,
         url: '/mozo'
-    });
+    }, pedido.mesaCode);
 }
 
 // Aviso a los MOZOS cuando una estación marca una partida lista (ir a buscarla).
@@ -171,7 +183,7 @@ function notificarPedidoListoMozo(pedido, partida) {
         tag: `servir-${partida ? partida.id : pedido.id}`,
         url: '/mozo',
         pedido
-    });
+    }, pedido.mesaCode);
 }
 
 // Diagnóstico: envía una notificación de prueba a TODAS las suscripciones

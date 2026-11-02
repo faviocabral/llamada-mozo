@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { dataDir, atendidosTtlMin, barraCategorias } = require('./config');
+const { dataDir, atendidosTtlMin, barraCategorias, mozos: mozosCfg } = require('./config');
 
 const FILE = path.join(dataDir, 'data.json');
 
@@ -20,6 +20,8 @@ let state = {
     pedidos: [],
     // Mesas físicas unidas en una "mesa larga" (grupo grande de gente)
     gruposMesas: [],
+    // Staff: mozos con identidad, clave propia y zona opcional de mesas
+    mozos: [],
     // Config por restaurante: estaciones.barra = categorías ruteadas a /barra
     config: { estaciones: { barra: [] } }
 };
@@ -140,12 +142,15 @@ function load() {
         state.menu = Array.isArray(parsed.menu) ? parsed.menu : [];
         state.pedidos = (Array.isArray(parsed.pedidos) ? parsed.pedidos : []).map(migrarPartidas);
         state.gruposMesas = Array.isArray(parsed.gruposMesas) ? parsed.gruposMesas : [];
+        state.mozos = Array.isArray(parsed.mozos) ? parsed.mozos : [];
         if (parsed.config && parsed.config.estaciones) {
             state.config.estaciones = { ...state.config.estaciones, ...parsed.config.estaciones };
         }
     } catch {
         // data.json inexistente o corrupto: arranca limpio
     }
+    // Mozos: si no hay persistidos, se seedea desde config (MOZOS_JSON o clave única)
+    if (!state.mozos.length) state.mozos = mozosCfg.map(m => ({ mesas: [], ...m }));
     seed();
     prune();
 }
@@ -157,6 +162,31 @@ module.exports = {
     getSucursales: () => [...state.sucursales],
     getMesaByCode: (code) => state.mesas.find(m => m.id === code),
     getMesas: (sucursalId) => state.mesas.filter(m => !sucursalId || m.sucursalId === sucursalId),
+
+    // --- Mozos con identidad ---
+    getMozoByKey: (key) => state.mozos.find(m => m.key === key) || null,
+    getMozo: (id) => state.mozos.find(m => m.id === id) || null,
+    getMozos: () => [...state.mozos],
+    setMozoMesas(id, mesas) {
+        const m = state.mozos.find(x => x.id === id);
+        if (!m) return null;
+        m.mesas = Array.isArray(mesas) ? mesas : [];
+        persist();
+        return m;
+    },
+    // Zona: un mozo con mesas vacías cubre TODAS las mesas
+    mozosDeMesa(mesaCode) {
+        return state.mozos.filter(m => !m.mesas || !m.mesas.length || m.mesas.includes(mesaCode));
+    },
+    // Claim: la primera acción del mozo sobre un pedido lo marca como suyo
+    reclamarPedido(id, mozo) {
+        const p = state.pedidos.find(x => x.id === id);
+        if (p && !p.asignadoA && mozo) {
+            p.asignadoA = { id: mozo.id, nombre: mozo.nombre };
+            persist();
+        }
+        return p;
+    },
     getSucursal: (id) => state.sucursales.find(s => s.id === id),
     getTenant: (id) => state.tenants.find(t => t.id === id),
     getMenu: (sucursalId) => state.menu.filter(i => i.sucursalId === sucursalId && i.disponible),
@@ -193,11 +223,12 @@ module.exports = {
         return call;
     },
 
-    atenderCall(id) {
+    atenderCall(id, mozo) {
         const call = state.calls.find(c => c.id === id && c.estado === 'pendiente');
         if (!call) return null;
         call.estado = 'atendido';
         call.atendidaHora = new Date().toISOString();
+        if (mozo) call.atendidoPor = mozo.nombre; // claim: quién lo atendió
         persist();
         return call;
     },
@@ -371,6 +402,7 @@ module.exports = {
         state.subscriptions.push({
             endpoint: sub.endpoint,
             keys: sub.keys,
+            mozoId: sub.mozoId || null, // zona del mozo → filtra pushes por mesa
             createdAt: new Date().toISOString()
         });
         persist();

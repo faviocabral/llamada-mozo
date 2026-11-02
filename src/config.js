@@ -63,5 +63,16 @@ module.exports = {
     // Categorías del menú que se rutean a la estación BARRA (pantalla /barra).
     // Ej: BARRA_CATEGORIAS=Bebidas,Tragos — vacío = todo va a cocina.
     barraCategorias: (process.env.BARRA_CATEGORIAS || '')
-        .split(',').map(s => s.trim()).filter(Boolean)
+        .split(',').map(s => s.trim()).filter(Boolean),
+    // Mozos con identidad (multi-mozo): MOZOS_JSON =
+    // [{"id":"juan","nombre":"Juan","key":"juan1","mesas":[]}]
+    // mesas = zona por defecto (vacío = cubre todas). Sin env: un mozo
+    // genérico con la clave única — comportamiento igual al de siempre.
+    mozos: (() => {
+        try {
+            const arr = JSON.parse(process.env.MOZOS_JSON || '""');
+            if (Array.isArray(arr) && arr.length) return arr;
+        } catch {}
+        return [{ id: 'm1', nombre: 'Mozo', key: process.env.MOZO_KEY, mesas: [] }];
+    })()
 };

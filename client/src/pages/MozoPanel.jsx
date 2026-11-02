@@ -26,11 +26,16 @@ export default function MozoPanel({ mozoKey }) {
     const [pedidos, setPedidos] = useState([]);
     const [filtro, setFiltro] = useState('todas');
     const [mesaFiltro, setMesaFiltro] = useState(null);
+    const [mozo, setMozo] = useState(null); // {id, nombre, mesas} — identidad + zona
+    const [mesasPanel, setMesasPanel] = useState([]);
+    const [verTodas, setVerTodas] = useState(false); // salir de mi zona
     const socketRef = useRef(null);
 
     useEffect(() => {
         const socket = io({ auth: { role: 'mozo', key: mozoKey } });
         socketRef.current = socket;
+        socket.on('mozo-identidad', setMozo);
+        socket.on('mesas-panel', d => setMesasPanel(d.mesas || []));
         socket.on('llamados-pendientes', setLlamados);
         socket.on('llamado-nuevo', c => setLlamados(ls => [c, ...ls.filter(x => x.id !== c.id)]));
         socket.on('llamado-atendido', c => setLlamados(ls => ls.filter(x => x.id !== c.id)));
@@ -48,8 +53,13 @@ export default function MozoPanel({ mozoKey }) {
 
     const emit = (ev, data) => socketRef.current.emit(ev, data, () => {});
 
-    const activos = pedidos.filter(p => p.estado !== 'entregado');
-    const entregados = pedidos.filter(p => p.estado === 'entregado');
+    // Zona del mozo: mesas propias (vacío = todas). "Ver todas" sale de la zona.
+    const enZona = (mesaCode) =>
+        verTodas || !mozo || !mozo.mesas || !mozo.mesas.length || mozo.mesas.includes(mesaCode);
+
+    const activos = pedidos.filter(p => p.estado !== 'entregado' && enZona(p.mesaCode));
+    const entregados = pedidos.filter(p => p.estado === 'entregado' && enZona(p.mesaCode));
+    const llamadosZona = llamados.filter(c => enZona(c.mesa));
 
     // Conteos por filtro (sobre activos)
     const cuenta = { todas: activos.length };
@@ -82,9 +92,48 @@ export default function MozoPanel({ mozoKey }) {
         return null;
     };
 
+    const toggleZona = (code) => {
+        if (!mozo) return;
+        const zona = mozo.mesas || [];
+        const nueva = zona.includes(code) ? zona.filter(x => x !== code) : [...zona, code];
+        socketRef.current.emit('mozo-asignar-zona', { mesas: nueva });
+    };
+
     return (
         <div className="page">
-            <div className="topbar">Panel del mozo<small>llamados y pedidos en vivo</small></div>
+            <div className="topbar">
+                Panel{mozo ? ` · ${mozo.nombre}` : ' del mozo'}
+                <small>llamados y pedidos en vivo</small>
+            </div>
+
+            {/* Zona del mozo: elegir qué mesas cubre */}
+            {mesasPanel.length > 0 && mozo && (
+                <details className="panel-zona">
+                    <summary>
+                        🗺️ Mi zona: {mozo.mesas && mozo.mesas.length
+                            ? mozo.mesas.map(c => `Mesa ${(mesasPanel.find(m => m.id === c) || {}).numero || c}`).join(', ')
+                            : 'todas las mesas'}
+                    </summary>
+                    <div className="panel-filtros">
+                        {mesasPanel.map(m => (
+                            <button key={m.id}
+                                className={'chip' + ((mozo.mesas || []).includes(m.id) ? ' active' : '')}
+                                onClick={() => toggleZona(m.id)}>
+                                Mesa {m.numero}
+                            </button>
+                        ))}
+                    </div>
+                </details>
+            )}
+            {/* Con zona activa: toggle para ver el salón completo */}
+            {mozo && mozo.mesas && mozo.mesas.length > 0 && (
+                <div className="panel-filtros">
+                    <button className={'chip' + (verTodas ? ' active' : '')}
+                        onClick={() => setVerTodas(!verTodas)}>
+                        {verTodas ? '🌐 Viendo todas' : '🌐 Ver todas las mesas'}
+                    </button>
+                </div>
+            )}
 
             {/* Filtros con conteo */}
             <div className="panel-filtros">
@@ -125,7 +174,7 @@ export default function MozoPanel({ mozoKey }) {
                     </div>
                 )}
 
-                {llamados.map(c => (
+                {llamadosZona.map(c => (
                     <div className="panel-llamado" key={c.id}>
                         <div>
                             <b>🔔 Mesa {c.mesaNumero}</b>
@@ -150,6 +199,11 @@ export default function MozoPanel({ mozoKey }) {
                         <div className="panel-head">
                             <b>Mesa {p.mesaNumero} · {p.cliente || 'Pedido'}</b>
                             <span className="pedido-hora">
+                                {p.asignadoA && (
+                                    <span className={'chip-asignado' + (mozo && p.asignadoA.id === mozo.id ? ' mio' : '')}>
+                                        👤 {mozo && p.asignadoA.id === mozo.id ? 'Vos' : p.asignadoA.nombre}
+                                    </span>
+                                )}
                                 {new Date(p.hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                         </div>

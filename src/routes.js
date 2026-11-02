@@ -151,7 +151,8 @@ router.post('/api/suscribir', requireMozo, (req, res) => {
     if (!sub || typeof sub.endpoint !== 'string' || typeof sub.keys !== 'object' || !sub.keys) {
         return res.status(400).json({ error: 'Suscripción inválida' });
     }
-    store.addSubscription(sub);
+    // mozoId: la sub queda atada a un mozo → su zona filtra los pushes por mesa
+    store.addSubscription({ ...sub, mozoId: req.body.mozoId });
     console.log('✅ Dispositivo de mozo suscripto a push.');
     res.status(201).json({ ok: true });
 });

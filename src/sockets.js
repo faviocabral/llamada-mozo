@@ -43,13 +43,16 @@ module.exports = function registerSockets(io) {
         if (t.unref) t.unref();
     }
 
-    // Mesa: se conecta sin auth. Mozo: auth { role: 'mozo', key } — clave
-    // incorrecta rechaza la conexión para que el cliente pueda repreguntar.
+    // Mesa: se conecta sin auth. Mozo: auth { role: 'mozo', key } — la clave
+    // resuelve a un mozo con identidad (MOZOS_JSON) o a la clave única.
     io.use((socket, next) => {
         const auth = socket.handshake.auth || {};
         if (auth.role === 'mozo') {
-            if (auth.key !== mozoKey) return next(new Error('Clave de mozo incorrecta'));
+            const mozo = store.getMozoByKey(auth.key)
+                || (auth.key === mozoKey ? { id: '_gen', nombre: 'Mozo', mesas: [] } : null);
+            if (!mozo) return next(new Error('Clave de mozo incorrecta'));
             socket.data.isMozo = true;
+            socket.data.mozo = mozo;
         }
         next();
     });
@@ -71,7 +74,13 @@ module.exports = function registerSockets(io) {
                 mesas: store.getMesas(),
                 grupos: store.getGruposMesas()
             });
-            console.log(`🟢 Mozo conectado (${socket.id})`);
+            // Identidad: quién es y qué zona cubre (vacío = todas)
+            socket.emit('mozo-identidad', {
+                id: socket.data.mozo.id,
+                nombre: socket.data.mozo.nombre,
+                mesas: socket.data.mozo.mesas || []
+            });
+            console.log(`🟢 Mozo conectado: ${socket.data.mozo.nombre} (${socket.id})`);
         }
 
         socket.on('unirse-mesa', (mesaId) => {
@@ -112,7 +121,7 @@ module.exports = function registerSockets(io) {
         socket.on('mozo-atendio-llamado', (data, cb) => {
             if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
 
-            const call = store.atenderCall(String((data && data.id) ?? ''));
+            const call = store.atenderCall(String((data && data.id) ?? ''), socket.data.mozo);
             if (!call) return ack(cb, { ok: false, error: 'Llamado inexistente' });
 
             console.log(`✅ Mozo en camino a la Mesa ${call.mesaNumero}`);
@@ -216,6 +225,7 @@ module.exports = function registerSockets(io) {
             if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
             const pedido = store.setPedidoEstado(String((data && data.id) ?? ''), estado);
             if (!pedido) return ack(cb, { ok: false, error: 'Pedido inexistente o transición inválida' });
+            store.reclamarPedido(pedido.id, socket.data.mozo); // claim al primer actuar
             console.log(`🍽️ Pedido ${estado}: Mesa ${pedido.mesaNumero}`);
             difundir(pedido);
             if (estado === 'confirmado') push.notificarPedidoConfirmado(pedido);
@@ -230,6 +240,7 @@ module.exports = function registerSockets(io) {
             const res = store.setPartidaEstado(String((data && data.id) ?? ''), destino, estado);
             if (!res) return ack(cb, { ok: false, error: 'Pedido inexistente o transición inválida' });
             const { pedido, partida } = res;
+            store.reclamarPedido(pedido.id, socket.data.mozo); // claim al primer actuar
             console.log(`🍽️ Partida ${partida.estacion} ${estado}: Mesa ${pedido.mesaNumero}`);
             difundir(pedido);
             if (estado === 'preparando') push.notificarPartidaPreparando(pedido, partida);
@@ -277,6 +288,15 @@ module.exports = function registerSockets(io) {
             console.log(`✓ Partida cerrada por el mozo (${partida.estacion}): Mesa ${pedido.mesaNumero}`);
             io.to(salaMesa(pedido.mesaCode)).emit('pedido-actualizado', pedido);
             io.to(salaMozos(pedido.sucursalId)).emit('pedido-actualizado', pedido);
+            ack(cb, { ok: true });
+        });
+
+        // Zona del mozo: qué mesas cubre (vacío = todas). Persiste en el store.
+        socket.on('mozo-asignar-zona', (data, cb) => {
+            if (!socket.data.isMozo) return ack(cb, { ok: false, error: 'No autorizado' });
+            const m = store.setMozoMesas(socket.data.mozo.id, (data && data.mesas) || []);
+            if (!m) return ack(cb, { ok: false, error: 'Mozo inexistente' });
+            socket.emit('mozo-identidad', { id: m.id, nombre: m.nombre, mesas: m.mesas });
             ack(cb, { ok: true });
         });
 
