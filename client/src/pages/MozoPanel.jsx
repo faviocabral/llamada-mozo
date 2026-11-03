@@ -262,7 +262,7 @@ export default function MozoPanel({ mozoKey }) {
                             {FILTROS.map(f => (
                                 <button key={f.id}
                                     className={'sheet-opt' + (filtro === f.id ? ' sel' : '')}
-                                    onClick={() => setFiltro(f.id)}>
+                                    onClick={() => { setFiltro(f.id); setSheet(null); }}>
                                     <span>{f.ico} {f.lbl}</span><b>{cuenta[f.id]}</b>
                                 </button>
                             ))}
@@ -272,7 +272,7 @@ export default function MozoPanel({ mozoKey }) {
                                 <div className="sheet-sub">Por mesa</div>
                                 <div className="sheet-opts">
                                     <button className={'sheet-opt' + (!mesaFiltro ? ' sel' : '')}
-                                        onClick={() => setMesaFiltro(null)}>
+                                        onClick={() => { setMesaFiltro(null); setSheet(null); }}>
                                         <span>Todas las mesas</span>
                                     </button>
                                     {mesasConPedidos.map(mc => {
@@ -280,7 +280,7 @@ export default function MozoPanel({ mozoKey }) {
                                         return (
                                             <button key={mc}
                                                 className={'sheet-opt' + (mesaFiltro === mc ? ' sel' : '')}
-                                                onClick={() => setMesaFiltro(mesaFiltro === mc ? null : mc)}>
+                                                onClick={() => { setMesaFiltro(mesaFiltro === mc ? null : mc); setSheet(null); }}>
                                                 <span>Mesa {p0.mesaNumero}</span>
                                                 <b>{activos.filter(p => p.mesaCode === mc).length}</b>
                                             </button>
