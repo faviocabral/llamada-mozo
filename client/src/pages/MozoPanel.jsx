@@ -29,7 +29,7 @@ export default function MozoPanel({ mozoKey }) {
     const [mozo, setMozo] = useState(null); // {id, nombre, mesas} — identidad + zona
     const [mesasPanel, setMesasPanel] = useState([]);
     const [verTodas, setVerTodas] = useState(false); // salir de mi zona
-    const [zonaOpen, setZonaOpen] = useState(false); // modal "Mi zona"
+    const [sheet, setSheet] = useState(null); // 'filtro' | 'cobrar' | 'zona'
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -107,61 +107,26 @@ export default function MozoPanel({ mozoKey }) {
                 <small>llamados y pedidos en vivo</small>
             </div>
 
-            {/* Zona del mozo: chip compacto que abre el modal; al lado
-                el toggle para ver el salón completo cuando hay zona */}
-            {mesasPanel.length > 0 && mozo && (
-                <div className="panel-filtros">
-                    <button className={'chip zona-chip' + ((mozo.mesas || []).length ? ' active' : '')}
-                        onClick={() => setZonaOpen(true)}>
-                        🗺️ Zona{(mozo.mesas || []).length ? ` · ${mozo.mesas.length}` : ''}
-                    </button>
-                    {(mozo.mesas || []).length > 0 && (
-                        <button className={'chip' + (verTodas ? ' active' : '')}
-                            onClick={() => setVerTodas(!verTodas)}>
-                            {verTodas ? '🌐 Todas ✓' : '🌐 Ver todas'}
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {/* Filtros con conteo */}
-            <div className="panel-filtros">
-                {FILTROS.map(f => (
-                    <button key={f.id}
-                        className={'chip' + (filtro === f.id ? ' active' : '')}
-                        onClick={() => setFiltro(f.id)}>
-                        {f.ico} {f.lbl} <b>{cuenta[f.id]}</b>
-                    </button>
-                ))}
+            {/* Barra estilo Loyverse: 3 bloques, cada uno abre su sheet */}
+            <div className="panel-bar">
+                <button className={'panel-blk' + (filtro !== 'todas' || mesaFiltro ? ' active' : '')}
+                    onClick={() => setSheet('filtro')}>
+                    <span className="panel-blk-lbl">Filtro</span>
+                    <b>{FILTROS.find(f => f.id === filtro).lbl} · {visibles.length}</b>
+                </button>
+                <button className={'panel-blk' + (Object.keys(totalesMesa).length ? ' plata' : '')}
+                    onClick={() => setSheet('cobrar')}>
+                    <span className="panel-blk-lbl">A cobrar</span>
+                    <b>{gs(Object.values(totalesMesa).reduce((a, b) => a + b, 0))}</b>
+                </button>
+                <button className={'panel-blk' + (mozo && (mozo.mesas || []).length && !verTodas ? ' active' : '')}
+                    onClick={() => setSheet('zona')}>
+                    <span className="panel-blk-lbl">Zona</span>
+                    <b>{!mozo || !(mozo.mesas || []).length || verTodas ? 'Todas' : `${mozo.mesas.length} mesas`}</b>
+                </button>
             </div>
-            {/* Filtro por mesa (solo si hay más de una con pedidos) */}
-            {mesasConPedidos.length > 1 && (
-                <div className="panel-filtros mesas">
-                    <button className={'chip' + (!mesaFiltro ? ' active' : '')}
-                        onClick={() => setMesaFiltro(null)}>Todas</button>
-                    {mesasConPedidos.map(mc => {
-                        const p0 = activos.find(p => p.mesaCode === mc);
-                        return (
-                            <button key={mc}
-                                className={'chip' + (mesaFiltro === mc ? ' active' : '')}
-                                onClick={() => setMesaFiltro(mesaFiltro === mc ? null : mc)}>
-                                Mesa {p0.mesaNumero}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
 
             <div className="page-inner">
-                {/* Total a cobrar por mesa */}
-                {Object.keys(totalesMesa).length > 0 && (
-                    <div className="panel-totales">
-                        <b>💰 A cobrar:</b>
-                        {Object.entries(totalesMesa).map(([num, t]) => (
-                            <span key={num} className="panel-total-mesa">Mesa {num} · {gs(t)}</span>
-                        ))}
-                    </div>
-                )}
 
                 {llamadosZona.map(c => (
                     <div className="panel-llamado" key={c.id}>
@@ -282,9 +247,88 @@ export default function MozoPanel({ mozoKey }) {
                 )}
             </div>
 
-            {/* Modal "Mi zona": sheet con chips de mesas, como el de variantes */}
-            {zonaOpen && mozo && (
-                <div className="sheet-overlay" onClick={() => setZonaOpen(false)}>
+            {/* Sheet Filtro: estados + mesas con pedidos */}
+            {sheet === 'filtro' && (
+                <div className="sheet-overlay" onClick={() => setSheet(null)}>
+                    <div className="sheet" onClick={e => e.stopPropagation()}>
+                        <div className="sheet-head">
+                            <div>
+                                <div className="sheet-title">📋 Filtrar pedidos</div>
+                                <div className="sheet-desc">Por estado o por mesa.</div>
+                            </div>
+                            <button className="sheet-cerrar" onClick={() => setSheet(null)}>✕</button>
+                        </div>
+                        <div className="sheet-opts">
+                            {FILTROS.map(f => (
+                                <button key={f.id}
+                                    className={'sheet-opt' + (filtro === f.id ? ' sel' : '')}
+                                    onClick={() => setFiltro(f.id)}>
+                                    <span>{f.ico} {f.lbl}</span><b>{cuenta[f.id]}</b>
+                                </button>
+                            ))}
+                        </div>
+                        {mesasConPedidos.length > 1 && (
+                            <>
+                                <div className="sheet-sub">Por mesa</div>
+                                <div className="sheet-opts">
+                                    <button className={'sheet-opt' + (!mesaFiltro ? ' sel' : '')}
+                                        onClick={() => setMesaFiltro(null)}>
+                                        <span>Todas las mesas</span>
+                                    </button>
+                                    {mesasConPedidos.map(mc => {
+                                        const p0 = activos.find(p => p.mesaCode === mc);
+                                        return (
+                                            <button key={mc}
+                                                className={'sheet-opt' + (mesaFiltro === mc ? ' sel' : '')}
+                                                onClick={() => setMesaFiltro(mesaFiltro === mc ? null : mc)}>
+                                                <span>Mesa {p0.mesaNumero}</span>
+                                                <b>{activos.filter(p => p.mesaCode === mc).length}</b>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+                        <button className="sheet-listo" onClick={() => setSheet(null)}>Listo</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Sheet A cobrar: desglose por mesa */}
+            {sheet === 'cobrar' && (
+                <div className="sheet-overlay" onClick={() => setSheet(null)}>
+                    <div className="sheet" onClick={e => e.stopPropagation()}>
+                        <div className="sheet-head">
+                            <div>
+                                <div className="sheet-title">💰 A cobrar</div>
+                                <div className="sheet-desc">Suma de los pedidos activos de cada mesa.</div>
+                            </div>
+                            <button className="sheet-cerrar" onClick={() => setSheet(null)}>✕</button>
+                        </div>
+                        <div className="sheet-opts">
+                            {Object.keys(totalesMesa).length === 0 && (
+                                <div className="empty">Nada para cobrar todavía.</div>
+                            )}
+                            {Object.entries(totalesMesa).map(([num, t]) => (
+                                <div key={num} className="sheet-opt estatico">
+                                    <span>Mesa {num}</span><b>{gs(t)}</b>
+                                </div>
+                            ))}
+                            {Object.keys(totalesMesa).length > 1 && (
+                                <div className="sheet-opt estatico total">
+                                    <span>Total salón</span>
+                                    <b>{gs(Object.values(totalesMesa).reduce((a, b) => a + b, 0))}</b>
+                                </div>
+                            )}
+                        </div>
+                        <button className="sheet-listo" onClick={() => setSheet(null)}>Listo</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Sheet Mi zona: mesas del turno + ver todas */}
+            {sheet === 'zona' && mozo && (
+                <div className="sheet-overlay" onClick={() => setSheet(null)}>
                     <div className="sheet" onClick={e => e.stopPropagation()}>
                         <div className="sheet-head">
                             <div>
@@ -293,8 +337,14 @@ export default function MozoPanel({ mozoKey }) {
                                     Marcá las mesas que cubrís este turno — filtra tu panel y tus avisos. Sin marca = todas.
                                 </div>
                             </div>
-                            <button className="sheet-cerrar" onClick={() => setZonaOpen(false)}>✕</button>
+                            <button className="sheet-cerrar" onClick={() => setSheet(null)}>✕</button>
                         </div>
+                        {(mozo.mesas || []).length > 0 && (
+                            <button className={'sheet-opt' + (verTodas ? ' sel' : '')}
+                                onClick={() => setVerTodas(!verTodas)}>
+                                <span>🌐 Ver todas las mesas (salir de mi zona)</span>
+                            </button>
+                        )}
                         <div className="zona-grid">
                             {mesasPanel.map(m => (
                                 <button key={m.id}
@@ -304,7 +354,7 @@ export default function MozoPanel({ mozoKey }) {
                                 </button>
                             ))}
                         </div>
-                        <button className="sheet-listo" onClick={() => setZonaOpen(false)}>
+                        <button className="sheet-listo" onClick={() => setSheet(null)}>
                             Listo{mozo.mesas && mozo.mesas.length ? ` · ${mozo.mesas.length} mesas` : ' · todas'}
                         </button>
                     </div>

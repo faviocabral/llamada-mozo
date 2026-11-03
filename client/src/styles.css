@@ -372,25 +372,34 @@ button.home-push:active { transform: scale(.96); }
 .panel-btn:active { transform: scale(.96); }
 .pedido-card.panel-nuevo { border-left: 4px solid var(--orange); }
 
-/* Filtros del panel: chips con conteo (reusan .chip del menú) */
-.panel-filtros {
-    display: flex; gap: 8px; overflow-x: auto;
-    padding: 10px 14px 4px; scrollbar-width: none;
+/* Barra operativa estilo Loyverse: 3 bloques que abren sheets */
+.panel-bar {
+    display: flex; gap: 8px; padding: 10px 14px 4px;
 }
-.panel-filtros.mesas { padding-top: 4px; }
-.panel-filtros .chip { flex-shrink: 0; }
-.panel-filtros .chip b { margin-left: 3px; opacity: .8; }
+.panel-blk {
+    flex: 1; border: 1px solid #e6e6ea; border-radius: 12px;
+    background: #fff; padding: 9px 6px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-family: inherit; min-width: 0;
+}
+.panel-blk-lbl { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .4px; }
+.panel-blk b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.panel-blk.active { border-color: var(--teal); background: #e8faf8; }
+.panel-blk.active .panel-blk-lbl { color: var(--teal); }
+.panel-blk.plata b { color: var(--teal); }
+.panel-blk:active { transform: scale(.97); }
 
-/* Total a cobrar por mesa */
-.panel-totales {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    background: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px;
-    font-size: 13px;
+/* Opciones dentro de los sheets del panel */
+.sheet-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.sheet-opt {
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1px solid #e6e6ea; border-radius: 10px; background: #fff;
+    padding: 12px 14px; font-size: 14px; font-family: inherit; cursor: pointer;
 }
-.panel-total-mesa {
-    background: var(--teal); color: #fff; border-radius: 8px;
-    padding: 4px 10px; font-weight: 700;
-}
+.sheet-opt.sel { border-color: var(--teal); background: #e8faf8; font-weight: 700; }
+.sheet-opt.estatico { cursor: default; }
+.sheet-opt.total { border-color: var(--teal); font-weight: 800; }
+.sheet-sub { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; margin: 4px 0 6px; }
 
 /* Footer de la card: total + acciones */
 .panel-foot {
