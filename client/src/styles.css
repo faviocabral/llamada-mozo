@@ -374,7 +374,9 @@ button.home-push:active { transform: scale(.96); }
 
 /* Barra operativa estilo Loyverse: 3 bloques que abren sheets */
 .panel-bar {
-    display: flex; gap: 8px; padding: 10px 14px 4px;
+    display: flex; gap: 8px; padding: 10px 14px 8px;
+    position: sticky; top: 58px; z-index: 4;
+    background: var(--bg);
 }
 .panel-blk {
     flex: 1; border: 1px solid #e6e6ea; border-radius: 12px;
