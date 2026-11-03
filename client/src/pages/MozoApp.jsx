@@ -29,7 +29,8 @@ export default function MozoApp() {
     // Mesa elegida: app del cliente en modo mozo (ocupa toda la pantalla)
     if (mesaSel) {
         return <MesaApp key={mesaSel.code} codeProp={mesaSel.code} esMozo
-            onCambiarMesa={() => setMesaSel(null)} />;
+            onCambiarMesa={() => setMesaSel(null)}
+            onPanel={() => { setMesaSel(null); setVista('panel'); }} />;
     }
 
     if (error) return <div className="centro"><div><h1>⚠️</h1><p>{error}</p></div></div>;

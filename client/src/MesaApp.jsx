@@ -39,7 +39,7 @@ const mismaKey = (a, b) => {
 const firmaPedido = (p) =>
     p.estado + '|' + (p.partidas || []).map(pt => pt.estacion + ':' + pt.estado).join(',');
 
-export default function MesaApp({ codeProp, esMozo, onCambiarMesa }) {
+export default function MesaApp({ codeProp, esMozo, onCambiarMesa, onPanel }) {
     const { code: codeParam } = useParams();
     // codeProp: la mesa elegida en modo mozo; si no, el QR de la URL
     const code = codeProp || codeParam;
@@ -400,7 +400,7 @@ export default function MesaApp({ codeProp, esMozo, onCambiarMesa }) {
                 </button>
             )}
 
-            <TabBar tab={tab} setTab={setTab} pedidoCount={cartCount}
+            <TabBar tab={tab} setTab={setTab} pedidoCount={cartCount} esMozo={esMozo} onPanel={onPanel}
                 estadoCount={pedidos.filter(p => p.estado !== 'entregado' && p.estado !== 'rechazado').length} />
             <Toast toast={toast} />
         </>
