@@ -37,7 +37,8 @@ export default function MozoApp() {
 
     return (
         <>
-            {vista === 'panel' && <MozoPanel mozoKey={key} />}
+            {vista === 'panel' && <MozoPanel mozoKey={key}
+                onTomarPedido={m => setMesaSel(m)} />}
 
             {vista === 'pedido' && (
                 <div className="page">

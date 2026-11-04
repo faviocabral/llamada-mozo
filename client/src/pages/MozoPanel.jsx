@@ -21,7 +21,7 @@ const PRED = { confirmar: p => p.estado === 'nuevo', cocina: enMarcha, retirar: 
 
 // Panel operativo del mozo dentro de /mozo-app: llamados + pedidos de
 // TODAS las mesas en vivo, con filtros, total a cobrar y entregados.
-export default function MozoPanel({ mozoKey }) {
+export default function MozoPanel({ mozoKey, onTomarPedido }) {
     const [llamados, setLlamados] = useState([]);
     const [pedidos, setPedidos] = useState([]);
     const [filtro, setFiltro] = useState('todas');
@@ -134,9 +134,19 @@ export default function MozoPanel({ mozoKey }) {
                             <b>🔔 Mesa {c.mesaNumero}</b>
                             <div className="panel-sub">pide al mozo</div>
                         </div>
-                        <button className="panel-btn ok" onClick={() => emit('mozo-atendio-llamado', { id: c.id })}>
-                            ✓ En camino
-                        </button>
+                        <span className="panel-acciones">
+                            {onTomarPedido && (
+                                <button className="panel-btn" onClick={() => {
+                                    const m = mesasPanel.find(x => x.id === c.mesa);
+                                    onTomarPedido({ code: c.mesa, numero: m ? m.numero : c.mesaNumero });
+                                }}>
+                                    ✎ Tomar pedido
+                                </button>
+                            )}
+                            <button className="panel-btn ok" onClick={() => emit('mozo-atendio-llamado', { id: c.id })}>
+                                ✓ En camino
+                            </button>
+                        </span>
                     </div>
                 ))}
 

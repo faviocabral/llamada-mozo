@@ -7,7 +7,7 @@ const TABS = [
     { id: 'estado', ico: '📋', label: 'Estado' }
 ];
 
-export default function TabBar({ tab, setTab, pedidoCount, estadoCount, esMozo, onPanel }) {
+export default function TabBar({ tab, setTab, pedidoCount, estadoCount, esMozo, onPanel, onMesas }) {
     const renderTab = (t) => (
         <button
             key={t.id}
@@ -25,18 +25,23 @@ export default function TabBar({ tab, setTab, pedidoCount, estadoCount, esMozo, 
         </button>
     );
 
+    if (!esMozo) {
+        return <nav className="tabbar">{TABS.map(renderTab)}</nav>;
+    }
+
+    // Modo mozo: Mesas (volver a la grilla) | Menú | Panel elevado | Pedido | Estado
     return (
         <nav className="tabbar">
-            {/* En modo mozo, el Panel va al centro como botón elevado:
-                atajo directo al tablero operativo desde cualquier mesa */}
-            {esMozo ? TABS.slice(0, 2).map(renderTab) : null}
-            {esMozo && (
-                <button className="tab tab-panel" onClick={onPanel}>
-                    <span className="tab-panel-btn">📋</span>
-                    Panel
-                </button>
-            )}
-            {(esMozo ? TABS.slice(2) : TABS).map(renderTab)}
+            <button className="tab" onClick={onMesas}>
+                <span className="ico">🪑</span>
+                Mesas
+            </button>
+            {renderTab(TABS[1])}
+            <button className="tab tab-panel" onClick={onPanel}>
+                <span className="tab-panel-btn">📋</span>
+                Panel
+            </button>
+            {TABS.slice(2).map(renderTab)}
         </nav>
     );
 }

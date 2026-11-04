@@ -55,7 +55,8 @@ export default function MesaApp({ codeProp, esMozo, onCambiarMesa, onPanel }) {
     });
     const [info, setInfo] = useState(null);
     const [error, setError] = useState(null);
-    const [tab, setTab] = useState('home');
+    // En modo mozo entra directo al Menú: la portada no aporta nada al staff
+    const [tab, setTab] = useState(esMozo ? 'menu' : 'home');
     // Carrito persistido por mesa: un refresh accidental no borra lo elegido
     const [cart, setCart] = useState(() => {
         try { return JSON.parse(localStorage.getItem('cart:' + code) || '{}'); }
@@ -400,7 +401,8 @@ export default function MesaApp({ codeProp, esMozo, onCambiarMesa, onPanel }) {
                 </button>
             )}
 
-            <TabBar tab={tab} setTab={setTab} pedidoCount={cartCount} esMozo={esMozo} onPanel={onPanel}
+            <TabBar tab={tab} setTab={setTab} pedidoCount={cartCount} esMozo={esMozo}
+                onPanel={onPanel} onMesas={onCambiarMesa}
                 estadoCount={pedidos.filter(p => p.estado !== 'entregado' && p.estado !== 'rechazado').length} />
             <Toast toast={toast} />
         </>
